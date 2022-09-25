@@ -5,6 +5,7 @@ package winapi
 
 import (
 	"fmt"
+	"sync"
 	"syscall"
 	"unsafe"
 
@@ -12,20 +13,19 @@ import (
 )
 
 var (
-	user32              = syscall.MustLoadDLL("user32.dll")
-	enumWindows         = user32.MustFindProc("EnumWindows")
-	getWindowTextW      = user32.MustFindProc("GetWindowTextW")
-	isWindowVisible     = user32.MustFindProc("IsWindowVisible")
-	setWindowsHookExW   = user32.MustFindProc("SetWindowsHookExW")
-	callNextHookEx      = user32.MustFindProc("CallNextHookEx")
-	unhookWindowsHookEx = user32.MustFindProc("UnhookWindowsHookEx")
+	user32 = syscall.MustLoadDLL("user32.dll")
 
+	enumWindows              = user32.MustFindProc("EnumWindows")
+	getWindowTextW           = user32.MustFindProc("GetWindowTextW")
+	isWindowVisible          = user32.MustFindProc("IsWindowVisible")
+	setWindowsHookExW        = user32.MustFindProc("SetWindowsHookExW")
+	callNextHookEx           = user32.MustFindProc("CallNextHookEx")
+	unhookWindowsHookEx      = user32.MustFindProc("UnhookWindowsHookEx")
 	getForegroundWindow      = user32.MustFindProc("GetForegroundWindow")
 	setForegroundWindow      = user32.MustFindProc("SetForegroundWindow")
 	attachThreadInput        = user32.MustFindProc("AttachThreadInput")
 	getWindowThreadProcessId = user32.MustFindProc("GetWindowThreadProcessId")
-
-  systemParametersInfoA = user32.MustFindProc("SystemParametersInfoA")
+	systemParametersInfoA    = user32.MustFindProc("SystemParametersInfoA")
 
 	kernel             = syscall.MustLoadDLL("kernel32.dll")
 	getCurrentThreadId = kernel.MustFindProc("GetCurrentThreadId")
@@ -37,9 +37,9 @@ const (
 	WH_KEYBOARD    = 2
 )
 
-func EnumWindows(lpEnumFunc wintypes.WNDENUMPROC, lParam wintypes.LPARAM) (err error) {
+func EnumWindows(lpEnumFunc uintptr, lParam wintypes.LPARAM) (err error) {
 	res, _, err := enumWindows.Call(
-		syscall.NewCallback(lpEnumFunc),
+		lpEnumFunc,
 		uintptr(lParam),
 	)
 	if res == 0 {
@@ -82,34 +82,47 @@ type Window struct {
 	Handle wintypes.HWND
 }
 
-func GetVisibleWindows() []Window {
-	titles := make([]Window, 0)
-	cb := func(h wintypes.HWND, p wintypes.LPARAM) wintypes.LRESULT {
-		b := make([]uint16, 200)
-		_, err := GetWindowText(h, &b[0], int32(len(b)))
-		if err != nil {
-			// ignore and continue
-			return 1
-		}
-		if IsWindowVisible(h) == false {
-			return 1
-		}
-		title := syscall.UTF16ToString(b)
+var vw struct {
+	callback uintptr
+	titles   []Window
+	mut      sync.Mutex
+}
 
-		titles = append(titles, Window{title, h})
-		return 1
+func GetVisibleWindows() []Window {
+	vw.mut.Lock()
+	defer vw.mut.Unlock()
+	vw.titles = make([]Window, 0)
+
+	if vw.callback == 0 {
+		cb := func(h wintypes.HWND, p wintypes.LPARAM) wintypes.LRESULT {
+			b := make([]uint16, 200)
+			_, err := GetWindowText(h, &b[0], int32(len(b)))
+			if err != nil {
+				// ignore and continue
+				return 1
+			}
+			if IsWindowVisible(h) == false {
+				return 1
+			}
+			title := syscall.UTF16ToString(b)
+
+			vw.titles = append(vw.titles, Window{title, h})
+			return 1
+		}
+		vw.callback = syscall.NewCallback(cb)
 	}
-	err := EnumWindows(cb, 0)
+
+	err := EnumWindows(vw.callback, 0)
 	if err != nil {
 		// fmt.Println(err.Error())
 	}
-	return titles
+	return vw.titles
 }
 
-func SetWindowsHookExW(idHook int, lpfn wintypes.HOOKPROC, hInstance uintptr, threadId int) uintptr {
+func SetWindowsHookExW(idHook int, lpfn uintptr, hInstance uintptr, threadId int) uintptr {
 	r0, _, err := setWindowsHookExW.Call(
 		uintptr(idHook),
-		syscall.NewCallback(lpfn),
+		lpfn,
 		hInstance,
 		uintptr(threadId),
 	)
@@ -140,8 +153,8 @@ func GetWindowThreadProcessId(hwnd wintypes.HWND, lpdwProcessId wintypes.LPDWORD
 }
 
 func SystemParametersInfoA(uiAction uint, uiParam uint, pvParam wintypes.PVOID, fWinIni uint) wintypes.BOOL {
-  r, _, _ := systemParametersInfoA.Call(uintptr(uiAction), uintptr(uiParam), uintptr(pvParam), uintptr(fWinIni))
-  return wintypes.BOOL(r)
+	r, _, _ := systemParametersInfoA.Call(uintptr(uiAction), uintptr(uiParam), uintptr(pvParam), uintptr(fWinIni))
+	return wintypes.BOOL(r)
 }
 
 func UnhookWindowsHookEx(hhk int) {
@@ -153,21 +166,33 @@ func GetCurrentThreadId() wintypes.DWORD {
 	return wintypes.DWORD(r0)
 }
 
+var cbt struct {
+	callback    uintptr
+	go_callback func(int)
+	mut         sync.Mutex
+}
+
 func CBT(callback func(int)) {
+	cbt.mut.Lock()
+	defer cbt.mut.Unlock()
+
+	cbt.go_callback = callback
 	ch := make(chan bool)
 
-	var cb wintypes.HOOKPROC
-	cb = func(ncode int, wparam wintypes.WPARAM, lparam wintypes.LPARAM) wintypes.LRESULT {
-		if ncode >= 0 {
-			ch <- true
-			fmt.Println("New event!")
-			callback(int(ncode))
-			fmt.Printf("ncode: %v\n", ncode)
+	if cbt.callback == 0 {
+		cb := func(ncode int, wparam wintypes.WPARAM, lparam wintypes.LPARAM) wintypes.LRESULT {
+			if ncode >= 0 {
+				ch <- true
+				fmt.Println("New event!")
+				cbt.go_callback(ncode)
+				fmt.Printf("ncode: %v\n", ncode)
+			}
+			return CallNextHookEx(0, int(ncode), wparam, lparam)
 		}
-		return CallNextHookEx(0, int(ncode), wparam, lparam)
+		cbt.callback = syscall.NewCallback(cb)
 	}
 
-	hook := SetWindowsHookExW(wintypes.WH_KEYBOARD_LL, cb, 0, 0)
+	hook := SetWindowsHookExW(wintypes.WH_KEYBOARD_LL, cbt.callback, 0, 0)
 
 	if hook == 0 {
 		return
