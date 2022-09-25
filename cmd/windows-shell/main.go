@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"path"
 
-	"github.com/operdies/minimalist-shell/nats"
+	"github.com/operdies/windows-nats-shell/pkg/nats/windows-server"
 )
 
 type Service struct {
@@ -194,8 +194,9 @@ func main() {
 	home, _ := os.UserHomeDir()
 	os.Chdir(home)
 
+
 	applyConfig(config)
 	go superFlusher()
-  go nats.ListenIndefinitely()
+  go server.ListenIndefinitely()
 	select {}
 }

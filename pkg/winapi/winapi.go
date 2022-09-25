@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/operdies/minimalist-shell/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
 var (

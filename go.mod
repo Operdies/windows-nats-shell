@@ -1,4 +1,4 @@
-module github.com/operdies/minimalist-shell
+module github.com/operdies/windows-nats-shell
 
 go 1.19
 
