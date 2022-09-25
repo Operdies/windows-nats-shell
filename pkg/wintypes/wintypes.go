@@ -48,8 +48,9 @@ type MSG struct {
 }
 
 type Window struct {
-	Title  string
-	Handle HWND
+	Title     string
+	Handle    HWND
+	IsFocused bool
 }
 
 type POINT struct {

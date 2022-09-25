@@ -1,3 +1,4 @@
+//go:build windows && amd64
 // +build windows,amd64
 
 package winapi
@@ -76,21 +77,16 @@ func IsWindowVisible(hwnd wintypes.HWND) bool {
 	return int32(r0) != 0
 }
 
-type Window struct {
-	Title  string
-	Handle wintypes.HWND
-}
-
 var vw struct {
 	callback uintptr
-	titles   []Window
+	titles   []wintypes.Window
 	mut      sync.Mutex
 }
 
-func GetVisibleWindows() []Window {
+func GetVisibleWindows() []wintypes.Window {
 	vw.mut.Lock()
 	defer vw.mut.Unlock()
-	vw.titles = make([]Window, 0)
+	vw.titles = make([]wintypes.Window, 0)
 
 	if vw.callback == 0 {
 		cb := func(h wintypes.HWND, p wintypes.LPARAM) wintypes.LRESULT {

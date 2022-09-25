@@ -1,50 +1,18 @@
+//go:build windows && amd64
 // +build windows,amd64
 
 package server
 
 import (
-	"bytes"
-	"encoding/gob"
-	"encoding/json"
-	"fmt"
-	"log"
 	"time"
 
 	"github.com/nats-io/nats.go"
 
 	"github.com/operdies/windows-nats-shell/pkg/nats/api"
+	"github.com/operdies/windows-nats-shell/pkg/nats/utils"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
-
-func mySelect[T1 any, T2 any](source []T1, selector func(T1) T2) []T2 {
-	result := make([]T2, len(source))
-	for i, item := range source {
-		r := selector(item)
-		result[i] = r
-	}
-	return result
-}
-
-func encodeAny[T any](value T) []byte {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	enc.Encode(value)
-	return buf.Bytes()
-}
-
-func decodeAny[T any](buffer []byte) T {
-	reader := bytes.NewReader(buffer)
-	dec := gob.NewDecoder(reader)
-	var response T
-	dec.Decode(&response)
-	return response
-}
-
-func encodeWindows(windows []winapi.Window) []byte {
-	bytes, _ := json.Marshal(windows)
-	return bytes
-}
 
 func poll(nc *nats.Conn, interval time.Duration) {
 	ticker := time.NewTicker(interval)
@@ -67,21 +35,16 @@ func poll(nc *nats.Conn, interval time.Duration) {
 	for range ticker.C {
 		windows := winapi.GetVisibleWindows()
 		if anyChanged(windows) {
-			nc.Publish(api.WindowsUpdated, encodeWindows(windows))
+			nc.Publish(api.WindowsUpdated, utils.EncodeAny(windows))
 		}
 		prevWindows = windows
 	}
 }
 
-/*
-Windows set some countermeasures against focus stealing,
-but apparently there are workarounds ?
-*/
 func superFocusStealer(handle wintypes.HWND) wintypes.BOOL {
-	// Great, now all apps ever can steal focus whenever they want..
+  // We should probably reset this...
 	winapi.SystemParametersInfoA(wintypes.SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, wintypes.SPIF_SENDCHANGE)
 	success := winapi.SetForegroundWindow(handle)
-	// winapi.SystemParametersInfoA(wintypes.SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 1000000, wintypes.SPIF_SENDCHANGE)
 
 	return success
 }
@@ -92,21 +55,19 @@ func ListenIndefinitely() {
 	go poll(nc, time.Millisecond*300)
 	nc.Subscribe(api.Windows, func(m *nats.Msg) {
 		windows := winapi.GetVisibleWindows()
-		m.Respond(encodeWindows(windows))
+		m.Respond(utils.EncodeAny(windows))
 	})
 	nc.Subscribe(api.IsWindowFocused, func(m *nats.Msg) {
-		window := decodeAny[wintypes.HWND](m.Data)
+		window := utils.DecodeAny[wintypes.HWND](m.Data)
 		current := winapi.GetForegroundWindow()
 		focused := window == current
-		response := encodeAny(focused)
+		response := utils.EncodeAny(focused)
 		m.Respond(response)
 	})
 	nc.Subscribe(api.SetFocus, func(m *nats.Msg) {
-		log.Println("Focus request!")
-		window := decodeAny[wintypes.HWND](m.Data)
+		window := utils.DecodeAny[wintypes.HWND](m.Data)
 		success := superFocusStealer(window)
-		fmt.Printf("success: %v\n", success)
-		response := encodeAny(success)
+		response := utils.EncodeAny(success)
 		m.Respond(response)
 	})
 	// publish updates indefinitely
