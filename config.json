@@ -1,16 +1,8 @@
 {
+  "Wallpaper": {
+    "Path": "C:/Users/alexw/Documents/wallpaper.png"
+  },
   "Services": [
-    {
-      "Name": "nats windows driver",
-      "Executable": "go",
-      "Arguments": [
-        "run",
-        "."
-      ],
-      "WorkingDirectory": "C:/Users/alexw/repos/nats-windows-driver",
-      "AutoRestart": true,
-      "ForwardStdout": true
-    },
     {
       "Name": "nvim remote server",
       "Executable": "nvim.exe",
@@ -20,8 +12,10 @@
         "0.0.0.0:6666"
       ],
       "WorkingDirectory": "C:/Users/alexw/repos",
+      "Detach": true,
       "ForwardStdout": true,
       "AutoRestart": true,
+      "ForwardStderror": false,
       "ForwardStdin": true
     }
   ]

@@ -7,20 +7,36 @@ import (
 	"os"
 	"os/exec"
 	"path"
+
+	"github.com/operdies/minimalist-shell/nats"
 )
 
-type Services struct {
+type Service struct {
+  // Some human friendly name 
 	Name             string
+  // The full path to the exectuable file
 	Executable       string
 	Arguments        []string
+  // Defaults to cwd
 	WorkingDirectory string
+  // Automatically restart the process if it exits
 	AutoRestart      *bool
 	ForwardStdout    bool
+	ForwardStderror  bool
 	ForwardStdin     bool
+  // Should the process be detached (persist through shell restart)
+	Detach           bool
+  // Any environment variables that should be defined
 	Environment      []string
 }
+
+type Wallpaper struct {
+	Path string
+}
+
 type Config struct {
-	Services []Services
+	Wallpaper Wallpaper
+	Services  []Service
 }
 
 type forwardedStdout struct {
@@ -32,10 +48,10 @@ type forwardedStdin struct {
 }
 
 func valueOrDefault[T any](value *T, def T) T {
-  if value == nil {
-    return def 
-  }
-  return *value
+	if value == nil {
+		return def
+	}
+	return *value
 }
 
 func myFilter[T1 any](source []T1, filter func(T1) bool) []T1 {
@@ -58,26 +74,33 @@ func (f forwardedStdout) Write(p []byte) (n int, err error) {
 	return
 }
 
-func startProgram(prog Services) {
+func startProgram(prog Service) {
 	start := func() {
 		cmd := exec.Command(prog.Executable, prog.Arguments...)
 		cmd.Env = append(cmd.Env, prog.Environment...)
 		cmd.Dir = prog.WorkingDirectory
+		if prog.ForwardStderror {
+			cmd.Stderr = os.Stderr
+		}
 		if prog.ForwardStdin {
 			cmd.Stdin = os.Stdin
 		}
+
 		if prog.ForwardStdout {
 			var f forwardedStdout
 			f.name = prog.Name
 			cmd.Stdout = os.Stdout
 		}
-		cmd.Run()
+		err := cmd.Run()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}
 
 	i := 0
-  autoRestart := valueOrDefault(prog.AutoRestart, true)
+	autoRestart := valueOrDefault(prog.AutoRestart, true)
 	fmt.Printf("Starting Process: %v %v in %v (%v) with AutoRestart: %v\n", prog.Executable, prog.Arguments, prog.WorkingDirectory, prog.Name, autoRestart)
-  if autoRestart {
+	if autoRestart {
 		for {
 			start()
 			i += 1
@@ -137,13 +160,19 @@ func getConfigPaths() []string {
 	return result
 }
 
+func setWallpaper() {
+
+}
+
 func applyConfig(cfg *Config) {
+	if cfg.Wallpaper.Path != "" {
+	}
 	for _, prog := range cfg.Services {
 		go startProgram(prog)
 	}
 }
 
-func superFlusher(){
+func superFlusher() {
 	buf := make([]byte, 1)
 	for {
 		// We need to flush the stdin buffer in order to other processes to be able to read it
@@ -155,14 +184,16 @@ func superFlusher(){
 }
 
 func main() {
-  home, _ := os.UserHomeDir()
-  os.Chdir(home)
 	config := loadConfig()
 	if config == nil {
 		panic("No config file found")
 	}
 
+	home, _ := os.UserHomeDir()
+	os.Chdir(home)
+
 	applyConfig(config)
-  go superFlusher()
-  select {}
+	go superFlusher()
+  go nats.ListenIndefinitely()
+	select {}
 }
