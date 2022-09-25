@@ -1,3 +1,5 @@
+// +build windows,amd64
+
 package nats
 
 import (
@@ -5,13 +7,14 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/nats-io/nats.go"
 	"log"
 	"time"
 
-  "github.com/operdies/minimalist-shell/nats/api"
-  "github.com/operdies/minimalist-shell/wintypes"
-  "github.com/operdies/minimalist-shell/winapi"
+	"github.com/nats-io/nats.go"
+
+	"github.com/operdies/minimalist-shell/nats/api"
+	"github.com/operdies/minimalist-shell/winapi"
+	"github.com/operdies/minimalist-shell/wintypes"
 )
 
 func mySelect[T1 any, T2 any](source []T1, selector func(T1) T2) []T2 {

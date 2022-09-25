@@ -47,6 +47,11 @@ type MSG struct {
 	LPrivate DWORD
 }
 
+type Window struct {
+	Title  string
+	Handle HWND
+}
+
 type POINT struct {
 	X, Y LONG
 }
