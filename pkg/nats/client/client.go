@@ -39,7 +39,7 @@ func (client Client) GetPrograms() []string {
 }
 
 func (client Client) LaunchProgram(program string) error {
-	msg, _ := client.nc.Request(api.LaunchProgram, nil, timeout*2)
+	msg, _ := client.nc.Request(api.LaunchProgram, utils.EncodeAny(program), timeout*2)
 	status := utils.DecodeAny[string](msg.Data)
 	if status == "Ok" {
 		return nil
@@ -96,7 +96,7 @@ func (client Client) OnGetPrograms(callback func() []string) {
 
 func (client Client) OnLaunchProgram(callback func(string) string) {
 	client.nc.Subscribe(api.LaunchProgram, func(msg *nats.Msg) {
-    program := utils.DecodeAny[string](msg.Data)
+		program := utils.DecodeAny[string](msg.Data)
 		response := callback(program)
 		msg.Respond(utils.EncodeAny(response))
 	})
