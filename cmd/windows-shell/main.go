@@ -1,3 +1,4 @@
+//go:build windows && amd64
 // +build windows,amd64
 
 package main
@@ -14,22 +15,22 @@ import (
 )
 
 type Service struct {
-  // Some human friendly name 
-	Name             string
-  // The full path to the exectuable file
-	Executable       string
-	Arguments        []string
-  // Defaults to cwd
+	// Some human friendly name
+	Name string
+	// The full path to the exectuable file
+	Executable string
+	Arguments  []string
+	// Defaults to cwd
 	WorkingDirectory string
-  // Automatically restart the process if it exits
-	AutoRestart      *bool
-	ForwardStdout    bool
-	ForwardStderror  bool
-	ForwardStdin     bool
-  // Should the process be detached (persist through shell restart)
-	Detach           bool
-  // Any environment variables that should be defined
-	Environment      []string
+	// Automatically restart the process if it exits
+	AutoRestart     *bool
+	ForwardStdout   bool
+	ForwardStderror bool
+	ForwardStdin    bool
+	// Should the process be detached (persist through shell restart)
+	Detach bool
+	// Any environment variables that should be defined
+	Environment []string
 }
 
 type Wallpaper struct {
@@ -194,9 +195,8 @@ func main() {
 	home, _ := os.UserHomeDir()
 	os.Chdir(home)
 
-
 	applyConfig(config)
 	go superFlusher()
-  go server.ListenIndefinitely()
+	go server.ListenIndefinitely()
 	select {}
 }

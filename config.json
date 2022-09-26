@@ -15,7 +15,7 @@
       "Detach": true,
       "ForwardStdout": true,
       "AutoRestart": true,
-      "ForwardStderror": false,
+      "ForwardStderror": true,
       "ForwardStdin": true
     }
   ]

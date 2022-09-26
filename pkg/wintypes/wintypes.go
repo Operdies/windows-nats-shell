@@ -2,6 +2,7 @@ package wintypes
 
 // SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, SPIF_+UPDATEINIFILE)
 const (
+	WH_KEYBOARD = 2
 	WH_KEYBOARD_LL = 13
 	TRUE           = 1
 	FALSE          = 0
@@ -10,6 +11,14 @@ const (
 	SPIF_UPDATEINIFILE           = 0x01
 	SPIF_SENDCHANGE              = 0x02
 	SPIF_SENDWININICHANGE        = 0x02
+
+	WH_CALLWNDPROC = 4
+	WH_CBT         = 5
+	WH_SHELL       = 10
+
+
+  WINEVENT_OUTOFCONTEXT = 0 
+  WINEVENT_INCONTEXT = 4
 )
 
 // https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types
@@ -33,6 +42,7 @@ type (
 	HWINEVENTHOOK HANDLE
 	PBYTE         []BYTE
 	HOOKPROC      func(int, WPARAM, LPARAM) LRESULT
+	CBTProc       HOOKPROC
 	WNDENUMPROC   func(HWND, LPARAM) LRESULT
 	WINEVENTPROC  func(HWINEVENTHOOK, DWORD, HWND, LONG, LONG, DWORD, DWORD) uintptr
 )

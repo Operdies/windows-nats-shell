@@ -29,7 +29,12 @@ func (c Client) WindowsUpdated(callback func(Windows)) {
 		windows := utils.DecodeAny[Windows](m.Data)
 		callback(windows)
 	})
+}
 
+func (c Client) GetPrograms() []string {
+	msg, _ := c.nc.Request(api.GetPrograms, nil, timeout * 5)
+	programs := utils.DecodeAny[[]string](msg.Data)
+	return programs
 }
 
 func (c Client) SetFocus(window uint64) {
