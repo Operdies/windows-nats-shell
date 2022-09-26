@@ -21,11 +21,11 @@ type Client struct {
 type Windows = []wintypes.Window
 
 func (client Client) Windows() Windows {
-	response, _ := client.nc.Request(api.Windows, nil, timeout)
+	response, _ := client.nc.Request(api.GetWindows, nil, timeout)
 	return utils.DecodeAny[Windows](response.Data)
 }
 
-func (client Client) WindowsUpdated(callback func(Windows)) {
+func (client Client) OnWindowsUpdated(callback func(Windows)) {
 	client.nc.Subscribe(api.WindowsUpdated, func(m *nats.Msg) {
 		windows := utils.DecodeAny[Windows](m.Data)
 		callback(windows)
@@ -64,8 +64,8 @@ func New(url string) (c Client, err error) {
 	return
 }
 
-func (client Client) OnWindows(callback func() Windows) {
-	client.nc.Subscribe(api.Windows, func(m *nats.Msg) {
+func (client Client) OnGetWindows(callback func() Windows) {
+	client.nc.Subscribe(api.GetWindows, func(m *nats.Msg) {
 		windows := callback()
 		m.Respond(utils.EncodeAny(windows))
 	})
@@ -103,5 +103,5 @@ func (client Client) OnLaunchProgram(callback func(string) string) {
 }
 
 func (client Client) PublishWindows(w Windows) {
-	client.nc.Publish(api.Windows, utils.EncodeAny(w))
+	client.nc.Publish(api.GetWindows, utils.EncodeAny(w))
 }
