@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -95,11 +96,15 @@ func ListenIndefinitely() {
 	nc.Subscribe(api.LaunchProgram, func(m *nats.Msg) {
 		IndexItems()
 		requested := utils.DecodeAny[string](m.Data)
+		fmt.Println("Got command to start", requested)
 		var err error
-		if val, ok := menuItems[requested]; ok {
-			err = exec.Command(val).Start()
+		val, ok := menuItems[requested]
+		// quote := "\""
+		fmt.Println(requested, val, ok)
+		if ok {
+			err = startDetachedProcess(val)
 		} else {
-			err = exec.Command("start", requested).Start()
+			err = startDetachedProcess(requested)
 		}
 		if err != nil {
 			m.Respond([]byte(err.Error()))
@@ -110,6 +115,18 @@ func ListenIndefinitely() {
 
 	// publish updates indefinitely
 	select {}
+}
+
+func startDetachedProcess(proc string) error {
+	// We need to pass in some empty quotes so the start command can't misinterpret the first part of paths with spaces
+	// as the window title
+  cmd := exec.Command("cmd.exe")
+  cmd.Args = nil
+  // Forego any escaping because 'cmd /C start' is really particular
+  cmd.SysProcAttr = &syscall.SysProcAttr{}
+  cmd.SysProcAttr.CmdLine = `/C start "sos" "` + proc + `"`
+	fmt.Println("Launching:", cmd.SysProcAttr.CmdLine)
+  return cmd.Start()
 }
 
 type ProcStart struct {
@@ -130,7 +147,7 @@ func getPathItems() map[string]string {
 			for _, path := range entries {
 				nm := path.Name()
 				if filepath.Ext(nm) == ".exe" {
-					pathMap[baseNameNoExt(nm)] = nm
+					pathMap[baseNameNoExt(nm)] = filepath.Join(dir, nm)
 				}
 			}
 		}
@@ -157,7 +174,7 @@ func getStartMenuItems() map[string]string {
 	filepath.WalkDir(startMenu, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() == false && filepath.Ext(d.Name()) != ".ini" {
 			nm := d.Name()
-			items[baseNameNoExt(nm)] = nm
+			items[baseNameNoExt(nm)] = path
 		}
 		return nil
 	})
