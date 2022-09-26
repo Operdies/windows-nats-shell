@@ -117,9 +117,9 @@ func ListenIndefinitely() {
 		if ok {
 			err = startDetachedProcess(val)
 		} else {
-      // As a fallback, just attempt to start it with 'cmd /c Start'
-      // This makes sense for e.g. URLs or any other application which is able 
-      // to handle some file extension or URI scheme
+			// As a fallback, just attempt to start it with 'cmd /c Start'
+			// This makes sense for e.g. URLs or any other application which is able
+			// to handle some file extension or URI scheme
 			err = startDetachedProcess(requested)
 		}
 
@@ -128,7 +128,7 @@ func ListenIndefinitely() {
 		}
 		return "Started " + requested
 	})
-  select {}
+	select {}
 }
 
 func startDetachedProcess(proc string) error {
@@ -197,6 +197,9 @@ var menuItems map[string]string
 var indexMut sync.Mutex
 
 func indexItems() {
+	if menuItems != nil {
+		return
+	}
 	indexMut.Lock()
 	defer indexMut.Unlock()
 	if menuItems == nil {
