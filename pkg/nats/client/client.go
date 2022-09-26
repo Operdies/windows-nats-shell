@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -32,9 +33,18 @@ func (c Client) WindowsUpdated(callback func(Windows)) {
 }
 
 func (c Client) GetPrograms() []string {
-	msg, _ := c.nc.Request(api.GetPrograms, nil, timeout * 5)
+	msg, _ := c.nc.Request(api.GetPrograms, nil, timeout*5)
 	programs := utils.DecodeAny[[]string](msg.Data)
 	return programs
+}
+
+func (c Client) LaunchProgram(program string) error {
+  msg, _ := c.nc.Request(api.LaunchProgram, nil, timeout * 2)
+  status := utils.DecodeAny[string](msg.Data)
+  if status == "Ok" {
+    return nil
+  }
+  return errors.New(string(msg.Data))
 }
 
 func (c Client) SetFocus(window uint64) {

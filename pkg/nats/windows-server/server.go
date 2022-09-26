@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -58,7 +59,7 @@ func superFocusStealer(handle wintypes.HWND) wintypes.BOOL {
 }
 
 func ListenIndefinitely() {
-  go IndexItems()
+	go IndexItems()
 	nc, _ := nats.Connect(nats.DefaultURL)
 	defer nc.Close()
 	go poll(nc, time.Millisecond*300)
@@ -81,10 +82,32 @@ func ListenIndefinitely() {
 		m.Respond(response)
 	})
 	nc.Subscribe(api.GetPrograms, func(m *nats.Msg) {
-    IndexItems()
-    response := utils.EncodeAny(menuItems)
+		IndexItems()
+		data := make([]string, len(menuItems))
+		i := 0
+		for k := range menuItems {
+			data[i] = k
+			i = i + 1
+		}
+		response := utils.EncodeAny(data)
 		m.Respond(response)
 	})
+	nc.Subscribe(api.LaunchProgram, func(m *nats.Msg) {
+		IndexItems()
+		requested := utils.DecodeAny[string](m.Data)
+		var err error
+		if val, ok := menuItems[requested]; ok {
+			err = exec.Command(val).Start()
+		} else {
+			err = exec.Command("start", requested).Start()
+		}
+		if err != nil {
+			m.Respond([]byte(err.Error()))
+		} else {
+			m.Respond([]byte("Ok"))
+		}
+	})
+
 	// publish updates indefinitely
 	select {}
 }
@@ -94,9 +117,9 @@ type ProcStart struct {
 	args     []string
 }
 
-func getPathItems() []string {
+func getPathItems() map[string]string {
 	path, exists := os.LookupEnv("PATH")
-	mymap := map[string]bool{}
+	pathMap := map[string]string{}
 	if exists {
 		for _, dir := range strings.Split(path, ";") {
 			if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -105,52 +128,52 @@ func getPathItems() []string {
 			}
 			entries, _ := ioutil.ReadDir(dir)
 			for _, path := range entries {
-				if filepath.Ext(path.Name()) == ".exe" {
-					mymap[path.Name()] = true
+				nm := path.Name()
+				if filepath.Ext(nm) == ".exe" {
+					pathMap[baseNameNoExt(nm)] = nm
 				}
 			}
 		}
 	}
-	executables := make([]string, 0)
-	for k := range mymap {
-		if len(k) > 0 {
-			executables = append(executables, k)
-		}
-	}
 
-	return executables
+	return pathMap
 }
 
-func getStartMenuItems() []string {
+func baseNameNoExt(fullname string) string {
+	bn := filepath.Base(fullname)
+	idx := strings.LastIndex(bn, ".")
+	if idx > 0 {
+		return bn[:idx]
+	}
+	return bn
+}
+
+func getStartMenuItems() map[string]string {
 	// C:\Users\alexw\AppData\Roaming\Microsoft\Windows\Start Menu
 	roaming := os.Getenv("APPDATA")
 	startMenu := path.Join(roaming, "Microsoft", "Windows", "Start Menu")
-	items := make([]string, 0)
+	items := map[string]string{}
 
 	filepath.WalkDir(startMenu, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() == false && filepath.Ext(d.Name()) != ".ini" {
-			items = append(items, path)
+			nm := d.Name()
+			items[baseNameNoExt(nm)] = nm
 		}
 		return nil
 	})
 	return items
 }
 
-var menuItems []string
+var menuItems map[string]string
 
 func IndexItems() {
 	if menuItems == nil {
 		executables := getPathItems()
-		executables = append(executables, getStartMenuItems()...)
-    menuItems = executables
+		for k, v := range getStartMenuItems() {
+			executables[k] = v
+		}
+		menuItems = executables
 	}
-}
-
-func PublishPrograms() {
-	nc, _ := nats.Connect(nats.DefaultURL)
-	defer nc.Close()
-  IndexItems()
-	nc.Publish(api.GetPrograms, []byte(strings.Join(menuItems, "\n")))
 }
 
 func handler(hwinEventHook wintypes.HWINEVENTHOOK, event wintypes.DWORD, hwnd wintypes.HWND, idObject, idChild wintypes.LONG, idEventThread, dwmsEventTime wintypes.DWORD) uintptr {
