@@ -1,30 +1,29 @@
 //go:build windows && amd64
 // +build windows,amd64
 
-package server
+package main
 
 import (
 	"fmt"
 	"io/fs"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/nats-io/nats.go"
 
-	"github.com/operdies/windows-nats-shell/pkg/nats/internal/api"
-	"github.com/operdies/windows-nats-shell/pkg/nats/utils"
+	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
-func poll(nc *nats.Conn, interval time.Duration) {
+func poll(s client.Client, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	prevWindows := make([]wintypes.Window, 0)
 
@@ -45,7 +44,7 @@ func poll(nc *nats.Conn, interval time.Duration) {
 	for range ticker.C {
 		windows := winapi.GetVisibleWindows()
 		if anyChanged(windows) {
-			nc.Publish(api.WindowsUpdated, utils.EncodeAny(windows))
+			s.PublishWindows(windows)
 		}
 		prevWindows = windows
 	}
@@ -59,86 +58,98 @@ func superFocusStealer(handle wintypes.HWND) wintypes.BOOL {
 	return success
 }
 
+func init() {
+	go indexItems()
+}
+
+func getValues[T1 comparable, T2 any](source map[T1]T2) []T2 {
+	result := make([]T2, len(source))
+	k := 0
+	for _, v := range source {
+		result[k] = v
+		k = k + 1
+	}
+
+	return result
+}
+
+func getKeys[T1 comparable, T2 any](source map[T1]T2) []T1 {
+	result := make([]T1, len(source))
+	k := 0
+	for v := range source {
+		result[k] = v
+		k = k + 1
+	}
+
+	return result
+}
+
 func ListenIndefinitely() {
-	go IndexItems()
-	nc, _ := nats.Connect(nats.DefaultURL)
-	defer nc.Close()
-	go poll(nc, time.Millisecond*300)
-	nc.Subscribe(api.Windows, func(m *nats.Msg) {
-		windows := winapi.GetVisibleWindows()
-		m.Respond(utils.EncodeAny(windows))
-	})
-	nc.Subscribe(api.IsWindowFocused, func(m *nats.Msg) {
-		window := utils.DecodeAny[wintypes.HWND](m.Data)
+	client, _ := client.New(nats.DefaultURL)
+	defer client.Close()
+	go poll(client, time.Millisecond*1000)
+	client.OnWindows(winapi.GetVisibleWindows)
+
+	client.OnIsWindowFocused(func(h wintypes.HWND) bool {
 		current := winapi.GetForegroundWindow()
-		focused := window == current
-		response := utils.EncodeAny(focused)
-		m.Respond(response)
+		return current == h
 	})
-	nc.Subscribe(api.SetFocus, func(m *nats.Msg) {
-		window := utils.DecodeAny[wintypes.HWND](m.Data)
-		success := superFocusStealer(window)
-		log.Printf("Want to focus %v: %v\n", window, success)
-		response := utils.EncodeAny(success)
-		m.Respond(response)
+
+	client.OnSetFocus(func(h wintypes.HWND) bool {
+		return superFocusStealer(h) == 1
 	})
-	nc.Subscribe(api.GetPrograms, func(m *nats.Msg) {
-		IndexItems()
-		data := make([]string, len(menuItems))
-		i := 0
-		for k := range menuItems {
-			data[i] = k
-			i = i + 1
+
+	client.OnGetPrograms(func() []string {
+		// Ensure the files are properly indexed before proceeding
+		indexItems()
+		return getKeys(menuItems)
+	})
+
+	client.OnLaunchProgram(func(requested string) string {
+		indexItems()
+		if requested == "" {
+			return "No program specified"
 		}
-		response := utils.EncodeAny(data)
-		m.Respond(response)
-	})
-	nc.Subscribe(api.LaunchProgram, func(m *nats.Msg) {
-		IndexItems()
-		requested := utils.DecodeAny[string](m.Data)
 		fmt.Println("Got command to start", requested)
 		var err error
 		val, ok := menuItems[requested]
-		// quote := "\""
-		fmt.Println(requested, val, ok)
+
 		if ok {
 			err = startDetachedProcess(val)
 		} else {
+      // As a fallback, just attempt to start it with 'cmd /c Start'
+      // This makes sense for e.g. URLs or any other application which is able 
+      // to handle some file extension or URI scheme
 			err = startDetachedProcess(requested)
 		}
-		if err != nil {
-			m.Respond([]byte(err.Error()))
-		} else {
-			m.Respond([]byte("Ok"))
-		}
-	})
 
-	// publish updates indefinitely
-	select {}
+		if err != nil {
+			return err.Error()
+		}
+		return "Started " + requested
+	})
+  select {}
 }
 
 func startDetachedProcess(proc string) error {
 	// We need to pass in some empty quotes so the start command can't misinterpret the first part of paths with spaces
 	// as the window title
-  cmd := exec.Command("cmd.exe")
-  cmd.Args = nil
-  // Forego any escaping because 'cmd /C start' is really particular
-  cmd.SysProcAttr = &syscall.SysProcAttr{}
-  cmd.SysProcAttr.CmdLine = `/C start "sos" "` + proc + `"`
+	cmd := exec.Command("cmd.exe")
+	cmd.Args = nil
+	// Forego any escaping because 'cmd /C start' is really particular
+	cmd.SysProcAttr = &syscall.SysProcAttr{}
+	cmd.SysProcAttr.CmdLine = `/C start "sos" "` + proc + `"`
 	fmt.Println("Launching:", cmd.SysProcAttr.CmdLine)
-  return cmd.Start()
-}
-
-type ProcStart struct {
-	fullpath string
-	args     []string
+	return cmd.Start()
 }
 
 func getPathItems() map[string]string {
 	path, exists := os.LookupEnv("PATH")
 	pathMap := map[string]string{}
 	if exists {
-		for _, dir := range strings.Split(path, ";") {
+		home, _ := os.LookupEnv("USERPROFILE")
+		desktop := filepath.Join(home, "Desktop")
+		for _, dir := range strings.Split(path+";"+desktop, ";") {
 			if _, err := os.Stat(dir); os.IsNotExist(err) {
 				// path/to/whatever does not exist
 				continue
@@ -146,7 +157,8 @@ func getPathItems() map[string]string {
 			entries, _ := ioutil.ReadDir(dir)
 			for _, path := range entries {
 				nm := path.Name()
-				if filepath.Ext(nm) == ".exe" {
+				ext := filepath.Ext(nm)
+				if ext == ".exe" || ext == ".lnk" {
 					pathMap[baseNameNoExt(nm)] = filepath.Join(dir, nm)
 				}
 			}
@@ -182,8 +194,11 @@ func getStartMenuItems() map[string]string {
 }
 
 var menuItems map[string]string
+var indexMut sync.Mutex
 
-func IndexItems() {
+func indexItems() {
+	indexMut.Lock()
+	defer indexMut.Unlock()
 	if menuItems == nil {
 		executables := getPathItems()
 		for k, v := range getStartMenuItems() {
@@ -203,4 +218,8 @@ func GetEvents() {
 	hook := winapi.Hooker(handler)
 	fmt.Printf("hook: %v\n", hook)
 	select {}
+}
+
+func main() {
+	ListenIndefinitely()
 }

@@ -10,11 +10,10 @@ import (
 	"os"
 	"os/exec"
 	"path"
-
-	"github.com/operdies/windows-nats-shell/pkg/nats/windows-server"
 )
 
 type Service struct {
+	Config map[string]string
 	// Some human friendly name
 	Name string
 	// The full path to the exectuable file
@@ -22,24 +21,16 @@ type Service struct {
 	Arguments  []string
 	// Defaults to cwd
 	WorkingDirectory string
-	// Automatically restart the process if it exits
-	AutoRestart     *bool
-	ForwardStdout   bool
-	ForwardStderror bool
-	ForwardStdin    bool
-	// Should the process be detached (persist through shell restart)
-	Detach bool
+	AutoRestart      *bool
+	ForwardStdout    bool
+	ForwardStderror  bool
+	ForwardStdin     bool
 	// Any environment variables that should be defined
 	Environment []string
 }
 
-type Wallpaper struct {
-	Path string
-}
-
 type Config struct {
-	Wallpaper Wallpaper
-	Services  []Service
+	Services []Service
 }
 
 type forwardedStdout struct {
@@ -153,7 +144,6 @@ func getConfigPaths() []string {
 	result := make([]string, 0)
 	exeDir := getExeDir()
 	if exeDir != "" {
-
 		result = append(result, path.Join(exeDir, "config.json"))
 	}
 
@@ -163,19 +153,13 @@ func getConfigPaths() []string {
 	return result
 }
 
-func setWallpaper() {
-
-}
-
 func applyConfig(cfg *Config) {
-	if cfg.Wallpaper.Path != "" {
-	}
 	for _, prog := range cfg.Services {
 		go startProgram(prog)
 	}
 }
 
-func superFlusher() {
+func flushStdinPipeIndefinitely() {
 	buf := make([]byte, 1)
 	for {
 		// We need to flush the stdin buffer in order to other processes to be able to read it
@@ -196,7 +180,5 @@ func main() {
 	os.Chdir(home)
 
 	applyConfig(config)
-	go superFlusher()
-	go server.ListenIndefinitely()
-	select {}
+	flushStdinPipeIndefinitely()
 }

@@ -57,15 +57,11 @@ func SetForegroundWindow(hwnd wintypes.HWND) wintypes.BOOL {
 }
 
 func GetWindowText(hwnd wintypes.HWND, str *uint16, maxCount int32) (len int32, err error) {
-	r0, _, e1 := syscall.SyscallN(getWindowTextW.Addr(), uintptr(hwnd), uintptr(unsafe.Pointer(str)), uintptr(maxCount))
-	len = int32(r0)
-	if len == 0 {
-		if e1 != 0 {
-			err = error(e1)
-		} else {
-			err = syscall.EINVAL
-		}
-	}
+// r0, _, e1 := syscall.SyscallN(getWindowTextW.Addr(), uintptr(hwnd), uintptr(unsafe.Pointer(str)), uintptr(maxCount))
+  r0, _, e1 := getWindowTextW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(str)), uintptr(maxCount))
+  if r0 != 0 {
+    err = e1
+  }
 	return
 }
 
@@ -75,43 +71,45 @@ func IsWindowVisible(hwnd wintypes.HWND) bool {
 	return int32(r0) != 0
 }
 
-var vw struct {
-	callback      uintptr
-	titles        []wintypes.Window
-	mut           sync.Mutex
-	focusedWindow wintypes.HWND
+var aw struct {
+	handles  []wintypes.HWND
+	mut      sync.Mutex
+	callback uintptr
+}
+
+func GetAllWindows() []wintypes.HWND {
+	aw.mut.Lock()
+	defer aw.mut.Unlock()
+	aw.handles = make([]wintypes.HWND, 0)
+
+	if aw.callback == 0 {
+		aw.callback = syscall.NewCallback(
+			func(h wintypes.HWND, p wintypes.LPARAM) wintypes.LRESULT {
+				aw.handles = append(aw.handles, h)
+				return 1
+			})
+	}
+	EnumWindows(aw.callback, 0)
+	return aw.handles
 }
 
 func GetVisibleWindows() []wintypes.Window {
-	vw.mut.Lock()
-	defer vw.mut.Unlock()
-	vw.titles = make([]wintypes.Window, 0)
-	vw.focusedWindow = GetForegroundWindow()
-
-	if vw.callback == 0 {
-		cb := func(h wintypes.HWND, p wintypes.LPARAM) wintypes.LRESULT {
-			b := make([]uint16, 200)
+	handles := GetAllWindows()
+	result := make([]wintypes.Window, len(handles))
+	b := make([]uint16, 200)
+	k := 0
+	focused := GetForegroundWindow()
+	for _, h := range handles {
+		if IsWindowVisible(h) {
 			_, err := GetWindowText(h, &b[0], int32(len(b)))
 			if err != nil {
-				// ignore and continue
-				return 1
+				result[k] = wintypes.Window{Handle: h, Title: syscall.UTF16ToString(b), IsFocused: h == focused}
+        k += 1
 			}
-			if IsWindowVisible(h) == false {
-				return 1
-			}
-			title := syscall.UTF16ToString(b)
-
-			vw.titles = append(vw.titles, wintypes.Window{Title: title, Handle: h, IsFocused: h == vw.focusedWindow})
-			return 1
 		}
-		vw.callback = syscall.NewCallback(cb)
 	}
 
-	err := EnumWindows(vw.callback, 0)
-	if err != nil {
-		// fmt.Println(err.Error())
-	}
-	return vw.titles
+  return result[:k]
 }
 
 func SetWindowsHookExW(idHook int, lpfn uintptr, hInstance wintypes.HINSTANCE, threadId wintypes.DWORD) wintypes.HHOOK {
@@ -216,6 +214,6 @@ func SetWinEventHook(eventMin, eventMax wintypes.DWORD,
 }
 
 func Hooker(fn wintypes.WINEVENTPROC) wintypes.HWINEVENTHOOK {
-	 min, max := 0x00000001, 0x7FFFFFFF
+	min, max := 0x00000001, 0x7FFFFFFF
 	return SetWinEventHook(wintypes.DWORD(min), wintypes.DWORD(max), 0, fn, 0, 0, wintypes.WINEVENT_OUTOFCONTEXT)
 }

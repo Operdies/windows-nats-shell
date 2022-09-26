@@ -1,8 +1,7 @@
 package utils
 
 import (
-	"bytes"
-	"encoding/gob"
+	"encoding/json"
 )
 
 func Contains[T comparable](haystack []T, needle T) bool {
@@ -36,16 +35,12 @@ func Filter[T1 any](source []T1, filter func(T1) bool) []T1 {
 }
 
 func EncodeAny[T any](value T) []byte {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	enc.Encode(value)
-	return buf.Bytes()
+  result, _ := json.Marshal(value)
+  return result
 }
 
 func DecodeAny[T any](buffer []byte) T {
-	reader := bytes.NewReader(buffer)
-	dec := gob.NewDecoder(reader)
-	var response T
-	dec.Decode(&response)
-	return response
+  var result T 
+  json.Unmarshal(buffer, &result)
+  return result
 }

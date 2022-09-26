@@ -4,7 +4,20 @@
   },
   "Services": [
     {
-      "Name": "nvim remote server",
+      "Name": "windows-nats-driver",
+      "Executable": "go.exe",
+      "Arguments": [
+        "run",
+        "./cmd/windows-nats-driver"
+      ],
+      "WorkingDirectory": "C:/Users/alexw/repos/minimalist-shell",
+      "ForwardStdout": true,
+      "AutoRestart": true,
+      "ForwardStderror": true,
+      "ForwardStdin": true
+    },
+    {
+      "Name": "nvim-server",
       "Executable": "nvim.exe",
       "Arguments": [
         "--headless",
@@ -12,7 +25,6 @@
         "0.0.0.0:6666"
       ],
       "WorkingDirectory": "C:/Users/alexw/repos",
-      "Detach": true,
       "ForwardStdout": true,
       "AutoRestart": true,
       "ForwardStderror": true,
