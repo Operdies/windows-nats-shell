@@ -102,6 +102,6 @@ func (client Client) OnLaunchProgram(callback func(string) string) {
 	})
 }
 
-func (client Client) PublishWindows(w Windows) {
-	client.nc.Publish(api.GetWindows, utils.EncodeAny(w))
+func (client Client) PublishWindowsUpdated(w Windows) {
+	client.nc.Publish(api.WindowsUpdated, utils.EncodeAny(w))
 }

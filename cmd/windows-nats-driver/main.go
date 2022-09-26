@@ -44,7 +44,7 @@ func poll(s client.Client, interval time.Duration) {
 	for range ticker.C {
 		windows := winapi.GetVisibleWindows()
 		if anyChanged(windows) {
-			s.PublishWindows(windows)
+			s.PublishWindowsUpdated(windows)
 		}
 		prevWindows = windows
 	}
@@ -88,7 +88,7 @@ func ListenIndefinitely() {
 	client, _ := client.New(nats.DefaultURL)
 	defer client.Close()
 	go poll(client, time.Millisecond*1000)
-	client.OnWindows(winapi.GetVisibleWindows)
+	client.OnGetWindows(winapi.GetVisibleWindows)
 
 	client.OnIsWindowFocused(func(h wintypes.HWND) bool {
 		current := winapi.GetForegroundWindow()
