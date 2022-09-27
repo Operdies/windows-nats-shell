@@ -131,18 +131,20 @@ func (client Publisher) WindowsUpdated(w Windows) {
 }
 
 // Shell
-func (client Subscriber) RestartService(callback func(string)) {
+func (client Subscriber) RestartService(callback func(string) error) {
 	client.nc.Subscribe(shell.RestartService, func(msg *nats.Msg) {
-		callback(utils.DecodeAny[string](msg.Data))
+		err := callback(utils.DecodeAny[string](msg.Data))
+		msg.Respond(response(err))
 	})
 }
 func (client Publisher) RestartService(service string) {
 	client.nc.Publish(shell.RestartService, utils.EncodeAny(service))
 }
 
-func (client Subscriber) StopService(callback func(string)) {
+func (client Subscriber) StopService(callback func(string) error) {
 	client.nc.Subscribe(shell.StopService, func(msg *nats.Msg) {
-		callback(utils.DecodeAny[string](msg.Data))
+		err := callback(utils.DecodeAny[string](msg.Data))
+		msg.Respond(response(err))
 	})
 }
 
@@ -150,9 +152,17 @@ func (client Publisher) StopService(service string) {
 	client.nc.Publish(shell.StopService, utils.EncodeAny(service))
 }
 
-func (client Subscriber) StartService(callback func(string)) {
+func response(err error) []byte {
+	if err == nil {
+		return []byte("Ok")
+	}
+	return []byte(err.Error())
+}
+
+func (client Subscriber) StartService(callback func(string) error) {
 	client.nc.Subscribe(shell.StartService, func(msg *nats.Msg) {
-		callback(utils.DecodeAny[string](msg.Data))
+		err := callback(utils.DecodeAny[string](msg.Data))
+		msg.Respond(response(err))
 	})
 }
 
@@ -160,18 +170,13 @@ func (client Publisher) StartService(service string) {
 	client.nc.Publish(shell.StartService, utils.EncodeAny(service))
 }
 
-func (client Subscriber) RestartShell(callback func()) {
-	client.nc.Subscribe(shell.RestartShell, func(msg *nats.Msg) { callback() })
+func (client Subscriber) RestartShell(callback func() error) {
+	client.nc.Subscribe(shell.RestartShell, func(msg *nats.Msg) {
+		err := callback()
+		msg.Respond(response(err))
+	})
 }
 
 func (client Publisher) RestartShell() {
 	client.nc.Publish(shell.RestartShell, []byte{})
-}
-
-func (client Subscriber) ReloadConfig(callback func()) {
-	client.nc.Subscribe(shell.ReloadConfig, func(msg *nats.Msg) { callback() })
-}
-
-func (client Publisher) ReloadConfig() {
-	client.nc.Publish(shell.ReloadConfig, []byte{})
 }

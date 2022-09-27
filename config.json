@@ -5,11 +5,8 @@
   "Services": [
     {
       "Name": "windows-nats-driver",
-      "Executable": "go.exe",
-      "Arguments": [
-        "run",
-        "./cmd/windows-nats-driver"
-      ],
+      "Executable": "./windows-nats-driver.exe",
+      "Arguments": [],
       "WorkingDirectory": "C:/Users/alexw/repos/minimalist-shell",
       "ForwardStdout": true,
       "AutoRestart": true,

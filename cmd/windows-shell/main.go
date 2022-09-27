@@ -10,28 +10,12 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"time"
+
+	"github.com/nats-io/nats.go"
+	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
+	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 )
-
-type Service struct {
-	Config map[string]string
-	// Some human friendly name
-	Name string
-	// The full path to the exectuable file
-	Executable string
-	Arguments  []string
-	// Defaults to cwd
-	WorkingDirectory string
-	AutoRestart      *bool
-	ForwardStdout    bool
-	ForwardStderror  bool
-	ForwardStdin     bool
-	// Any environment variables that should be defined
-	Environment []string
-}
-
-type Config struct {
-	Services []Service
-}
 
 type forwardedStdout struct {
 	name string
@@ -48,19 +32,6 @@ func valueOrDefault[T any](value *T, def T) T {
 	return *value
 }
 
-func myFilter[T1 any](source []T1, filter func(T1) bool) []T1 {
-	cp := make([]T1, len(source))
-	k := 0
-	for i := 0; i < len(source); i = i + 1 {
-		item := source[i]
-		if filter(item) {
-			cp[k] = item
-			k = k + 1
-		}
-	}
-	return cp[:k]
-}
-
 func (f forwardedStdout) Write(p []byte) (n int, err error) {
 	fmt.Printf("%s: [%s]\n", f.name, string(p))
 	n = len(p)
@@ -68,54 +39,117 @@ func (f forwardedStdout) Write(p []byte) (n int, err error) {
 	return
 }
 
-func startProgram(prog Service) {
+func startProgram(job *job) {
+	i := 0
+	prog := job.service
+	onStopped := make(chan bool)
+	autoRestart := valueOrDefault(prog.AutoRestart, true)
+	var runningCmd *exec.Cmd
+
 	start := func() {
-		cmd := exec.Command(prog.Executable, prog.Arguments...)
-		cmd.Env = append(cmd.Env, prog.Environment...)
-		cmd.Dir = prog.WorkingDirectory
+		i += 1
+		fmt.Printf("Starting Process(%d): %v %v in %v (%v)\n", i, prog.Executable, prog.Arguments, prog.WorkingDirectory, prog.Name)
+
+		runningCmd = exec.Command(prog.Executable, prog.Arguments...)
+		runningCmd.Env = append(runningCmd.Env, prog.Environment...)
+		runningCmd.Dir = prog.WorkingDirectory
 		if prog.ForwardStderror {
-			cmd.Stderr = os.Stderr
+			runningCmd.Stderr = os.Stderr
 		}
 		if prog.ForwardStdin {
-			cmd.Stdin = os.Stdin
+			runningCmd.Stdin = os.Stdin
 		}
 
 		if prog.ForwardStdout {
 			var f forwardedStdout
 			f.name = prog.Name
-			cmd.Stdout = os.Stdout
+			runningCmd.Stdout = os.Stdout
 		}
-		err := cmd.Run()
+		err := runningCmd.Run()
+		fmt.Printf("Process '%s' exited.\n", prog.Name)
+		onStopped <- true
 		if err != nil {
 			fmt.Println(err.Error())
 		}
 	}
 
-	i := 0
-	autoRestart := valueOrDefault(prog.AutoRestart, true)
-	fmt.Printf("Starting Process: %v %v in %v (%v) with AutoRestart: %v\n", prog.Executable, prog.Arguments, prog.WorkingDirectory, prog.Name, autoRestart)
-	if autoRestart {
-		for {
-			start()
-			i += 1
-			fmt.Printf("Starting Process(%d): %v %v in %v (%v)\n", i, prog.Executable, prog.Arguments, prog.WorkingDirectory, prog.Name)
+	stopProg := func() bool {
+		if runningCmd != nil {
+			runningCmd.Process.Kill()
+			runningCmd.Wait()
 		}
-	} else {
-		start()
+		return true
 	}
+
+	go func() {
+		for {
+			<-job.stop
+			fmt.Printf("Got signal to stop '%s'.\n", prog.Name)
+			autoRestart = false
+			stopProg()
+		}
+	}()
+
+	go func() {
+		for {
+			<-job.start
+			fmt.Printf("Got signal to start '%s'.\n", prog.Name)
+			autoRestart = *job.service.AutoRestart == true
+			if runningCmd != nil {
+				if runningCmd.ProcessState != nil {
+					if runningCmd.ProcessState.Exited() {
+						go start()
+					}
+				}
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			<-job.restart
+			fmt.Printf("Got signal to restart '%s'\n.", prog.Name)
+			autoRestart = *job.service.AutoRestart == true
+			stopProg()
+			go start()
+		}
+	}()
+
+	// auto-restart on crash / stop
+	go func() {
+		for {
+			<-onStopped
+			if autoRestart {
+				go start()
+			}
+		}
+	}()
+	go start()
+
 }
 
-func parseCfg(path string) *Config {
+func parseCfg(path string) (config *shell.Configuration, err error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return nil
+		return
 	}
-	var cfg Config
-	json.Unmarshal(content, &cfg)
-	return &cfg
+	var cfg shell.Configuration
+	err = json.Unmarshal(content, &cfg)
+	if err != nil {
+		return
+	}
+	added := map[string]string{}
+	for _, service := range cfg.Services {
+		if _, exists := added[service.Name]; exists {
+			err = fmt.Errorf("Multiple services with the name '%s' defined.", service.Name)
+			return
+		}
+	}
+	config = &cfg
+	return &cfg, nil
 }
 
-func loadConfig() *Config {
+func loadConfig() *string {
 	fileExists := func(f string) bool {
 		_, err := os.Stat(f)
 		return err == nil
@@ -123,7 +157,7 @@ func loadConfig() *Config {
 
 	for _, cand := range getConfigPaths() {
 		if fileExists(cand) {
-			return parseCfg(cand)
+			return &cand
 		}
 	}
 	return nil
@@ -153,9 +187,110 @@ func getConfigPaths() []string {
 	return result
 }
 
-func applyConfig(cfg *Config) {
-	for _, prog := range cfg.Services {
-		go startProgram(prog)
+type job struct {
+	service shell.Service
+	stop    chan bool
+	start   chan bool
+	restart chan bool
+}
+
+func start(config *shell.Configuration) {
+	fmt.Println("Starting shell!")
+
+	home, _ := os.UserHomeDir()
+	os.Chdir(home)
+
+	var jobs map[string]*job
+
+	stopJobs := func() {
+		if jobs != nil {
+			for _, job := range jobs {
+				job.stop <- true
+			}
+		}
+	}
+	defer stopJobs()
+
+	reloadConfig := func() error {
+		stopJobs()
+
+		jobs = map[string]*job{}
+
+		for _, service := range config.Services {
+			if _, ok := jobs[service.Name]; ok {
+				return fmt.Errorf("Duplicate definition for service '%s'\n", service.Name)
+			}
+			jobs[service.Name] = &job{service: service, stop: make(chan bool), start: make(chan bool), restart: make(chan bool)}
+		}
+
+		for _, job := range jobs {
+			startProgram(job)
+		}
+		return nil
+	}
+	err := reloadConfig()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	client, _ := client.New(nats.DefaultURL, time.Second)
+	defer client.Close()
+	client.Subscribe.StartService(func(s string) error {
+		job, ok := jobs[s]
+		if ok {
+			job.start <- true
+			return nil
+		}
+		return fmt.Errorf("Service '%s' is not configured.", s)
+	})
+	client.Subscribe.StopService(func(s string) error {
+		job, ok := jobs[s]
+		if ok {
+			job.stop <- true
+			return nil
+		}
+		return fmt.Errorf("Service '%s' is not configured.", s)
+	})
+	client.Subscribe.RestartService(func(s string) error {
+		job, ok := jobs[s]
+		if ok {
+			job.restart <- true
+			return nil
+		}
+		return fmt.Errorf("Service '%s' is not configured.", s)
+	})
+
+	quit := make(chan bool)
+	client.Subscribe.RestartShell(func() error {
+		quit <- true
+		return nil
+	})
+
+	go flushStdinPipeIndefinitely()
+	<-quit
+}
+
+func main() {
+	configFile := loadConfig()
+	if configFile == nil {
+		panic("No config file found")
+	}
+
+	config, err := parseCfg(*configFile)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	for {
+		start(config)
+		config2, err := parseCfg(*configFile)
+		if err != nil {
+			fmt.Println("Error in reloaded config:", err.Error())
+			fmt.Println("Services were restarted, but no changes were made.")
+		} else {
+			fmt.Println("Loaded new config file.")
+			config = config2
+		}
 	}
 }
 
@@ -168,17 +303,4 @@ func flushStdinPipeIndefinitely() {
 			return
 		}
 	}
-}
-
-func main() {
-	config := loadConfig()
-	if config == nil {
-		panic("No config file found")
-	}
-
-	home, _ := os.UserHomeDir()
-	os.Chdir(home)
-
-	applyConfig(config)
-	flushStdinPipeIndefinitely()
 }

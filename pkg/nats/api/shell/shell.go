@@ -9,8 +9,35 @@ const (
 	StopService = "Shell.StopService"
 	// Start a service by name
 	StartService = "Shell.StartService"
-	// Reload the shell config
-	ReloadConfig = "Shell.ReloadConfig"
 	// Restart the shell
 	RestartShell = "Shell.Restart"
+  // Get the currently loaded config
+	Config = "Shell.Config"
+	// Set a new config
+	SetConfig = "Shell.SetConfig"
+	// Add a new service
+	AddService = "Shell.AddService"
+	// Remove an existing service
+	RemoveService = "Shell.RemoveService"
 )
+
+type Service struct {
+	Config map[string]string
+	// Some human friendly name
+	Name string
+	// The full path to the exectuable file
+	Executable string
+	Arguments  []string
+	// Defaults to cwd
+	WorkingDirectory string
+	AutoRestart      *bool
+	ForwardStdout    bool
+	ForwardStderror  bool
+	ForwardStdin     bool
+	// Any environment variables that should be defined
+	Environment []string
+}
+
+type Configuration struct {
+	Services []Service
+}
