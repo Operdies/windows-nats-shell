@@ -180,3 +180,16 @@ func (client Subscriber) RestartShell(callback func() error) {
 func (client Publisher) RestartShell() {
 	client.nc.Publish(shell.RestartShell, []byte{})
 }
+
+func (client Subscriber) Config(callback func() shell.Configuration) {
+	client.nc.Subscribe(shell.Config, func(msg *nats.Msg) {
+    config := callback()
+		msg.Respond(utils.EncodeAny(config))
+	})
+}
+
+func (client Requester) Config() shell.Configuration {
+  msg, _ := client.nc.Request(shell.Config, nil, client.timeout)
+  return utils.DecodeAny[shell.Configuration](msg.Data)
+}
+

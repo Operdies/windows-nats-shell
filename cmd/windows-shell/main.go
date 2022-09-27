@@ -45,6 +45,11 @@ func startProgram(job *job) {
 	onStopped := make(chan bool)
 	autoRestart := valueOrDefault(prog.AutoRestart, true)
 	var runningCmd *exec.Cmd
+	defer func() {
+		if runningCmd != nil {
+			runningCmd.Process.Kill()
+		}
+	}()
 
 	start := func() {
 		i += 1
@@ -111,7 +116,9 @@ func startProgram(job *job) {
 			fmt.Printf("Got signal to restart '%s'\n.", prog.Name)
 			autoRestart = *job.service.AutoRestart == true
 			stopProg()
-			go start()
+			if !autoRestart {
+				go start()
+			}
 		}
 	}()
 
@@ -264,6 +271,10 @@ func start(config *shell.Configuration) {
 	client.Subscribe.RestartShell(func() error {
 		quit <- true
 		return nil
+	})
+
+	client.Subscribe.Config(func() shell.Configuration {
+		return *config
 	})
 
 	go flushStdinPipeIndefinitely()
