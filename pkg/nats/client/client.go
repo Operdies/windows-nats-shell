@@ -80,8 +80,6 @@ func New(url string, timeout time.Duration) (c Client, err error) {
 	if err != nil {
 		return
 	}
-	c.nc = nc
-	c.timeout = timeout
 	c.Publish = &Publisher{nc, timeout}
 	c.Request = &Requester{nc, timeout}
 	c.Subscribe = &Subscriber{nc, timeout}
