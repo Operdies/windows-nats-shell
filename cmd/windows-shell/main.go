@@ -132,7 +132,6 @@ func startProgram(job *job) {
 		}
 	}()
 	go start()
-
 }
 
 func parseCfg(path string) (config *shell.Configuration, err error) {
@@ -277,7 +276,6 @@ func start(config *shell.Configuration) {
 		return *config
 	})
 
-	go flushStdinPipeIndefinitely()
 	<-quit
 }
 
@@ -291,6 +289,8 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
+
+	go flushStdinPipeIndefinitely()
 
 	for {
 		start(config)
