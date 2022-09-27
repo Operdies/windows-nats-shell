@@ -19,6 +19,7 @@ import (
 	"github.com/nats-io/nats.go"
 
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
+	"github.com/operdies/windows-nats-shell/pkg/nats/utils"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
@@ -44,7 +45,7 @@ func poll(s client.Client, interval time.Duration) {
 	for range ticker.C {
 		windows := winapi.GetVisibleWindows()
 		if anyChanged(windows) {
-			s.PublishWindowsUpdated(windows)
+			s.Publish.WindowsUpdated(windows)
 		}
 		prevWindows = windows
 	}
@@ -85,27 +86,27 @@ func getKeys[T1 comparable, T2 any](source map[T1]T2) []T1 {
 }
 
 func ListenIndefinitely() {
-	client, _ := client.New(nats.DefaultURL)
+	client, _ := client.New(nats.DefaultURL, time.Second)
 	defer client.Close()
 	go poll(client, time.Millisecond*1000)
-	client.OnGetWindows(winapi.GetVisibleWindows)
+	client.Subscribe.GetWindows(winapi.GetVisibleWindows)
 
-	client.OnIsWindowFocused(func(h wintypes.HWND) bool {
+	client.Subscribe.IsWindowFocused(func(h wintypes.HWND) bool {
 		current := winapi.GetForegroundWindow()
 		return current == h
 	})
 
-	client.OnSetFocus(func(h wintypes.HWND) bool {
+	client.Subscribe.SetFocus(func(h wintypes.HWND) bool {
 		return superFocusStealer(h) == 1
 	})
 
-	client.OnGetPrograms(func() []string {
+	client.Subscribe.GetPrograms(func() []string {
 		// Ensure the files are properly indexed before proceeding
 		indexItems()
 		return getKeys(menuItems)
 	})
 
-	client.OnLaunchProgram(func(requested string) string {
+	client.Subscribe.LaunchProgram(func(requested string) string {
 		indexItems()
 		if requested == "" {
 			return "No program specified"
@@ -171,26 +172,47 @@ func getPathItems() map[string]string {
 func baseNameNoExt(fullname string) string {
 	bn := filepath.Base(fullname)
 	idx := strings.LastIndex(bn, ".")
-	if idx > 0 {
+	if idx > 0 && false {
 		return bn[:idx]
 	}
 	return bn
 }
 
-func getStartMenuItems() map[string]string {
-	// C:\Users\alexw\AppData\Roaming\Microsoft\Windows\Start Menu
-	roaming := os.Getenv("APPDATA")
-	startMenu := path.Join(roaming, "Microsoft", "Windows", "Start Menu")
+func getApplications(startMenu string) map[string]string {
+	allowedExtensions := []string{".exe", ".lnk", ".url"}
 	items := map[string]string{}
 
 	filepath.WalkDir(startMenu, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() == false && filepath.Ext(d.Name()) != ".ini" {
+		if d.IsDir() == false && utils.Contains(allowedExtensions, strings.ToLower(filepath.Ext(d.Name()))) {
 			nm := d.Name()
 			items[baseNameNoExt(nm)] = path
 		}
 		return nil
 	})
 	return items
+
+}
+
+func mergeMaps(maps ...map[string]string) map[string]string {
+	result := map[string]string{}
+	for _, m := range maps {
+		for k, v := range m {
+			result[k] = v
+		}
+	}
+	return result
+}
+
+func getStartMenuItems() []map[string]string {
+	envKeys := []string{"APPDATA", "PROGRAMDATA"}
+	result := make([]map[string]string, len(envKeys))
+	// C:\Users\alexw\AppData\Roaming\Microsoft\Windows\Start Menu
+	for i, k := range envKeys {
+		dir := os.Getenv(k)
+		startMenu := path.Join(dir, "Microsoft", "Windows", "Start Menu")
+		result[i] = getApplications(startMenu)
+	}
+	return result
 }
 
 var menuItems map[string]string
@@ -204,10 +226,7 @@ func indexItems() {
 	defer indexMut.Unlock()
 	if menuItems == nil {
 		executables := getPathItems()
-		for k, v := range getStartMenuItems() {
-			executables[k] = v
-		}
-		menuItems = executables
+		menuItems = mergeMaps(append(getStartMenuItems(), executables)...)
 	}
 }
 

@@ -71,26 +71,26 @@ func IsWindowVisible(hwnd wintypes.HWND) bool {
 	return int32(r0) != 0
 }
 
-var aw struct {
+var allWindows struct {
 	handles  []wintypes.HWND
 	mut      sync.Mutex
 	callback uintptr
 }
 
 func GetAllWindows() []wintypes.HWND {
-	aw.mut.Lock()
-	defer aw.mut.Unlock()
-	aw.handles = make([]wintypes.HWND, 0)
+	allWindows.mut.Lock()
+	defer allWindows.mut.Unlock()
+	allWindows.handles = make([]wintypes.HWND, 0)
 
-	if aw.callback == 0 {
-		aw.callback = syscall.NewCallback(
+	if allWindows.callback == 0 {
+		allWindows.callback = syscall.NewCallback(
 			func(h wintypes.HWND, p wintypes.LPARAM) wintypes.LRESULT {
-				aw.handles = append(aw.handles, h)
+				allWindows.handles = append(allWindows.handles, h)
 				return 1
 			})
 	}
-	EnumWindows(aw.callback, 0)
-	return aw.handles
+	EnumWindows(allWindows.callback, 0)
+	return allWindows.handles
 }
 
 func GetVisibleWindows() []wintypes.Window {
