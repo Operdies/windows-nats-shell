@@ -87,8 +87,7 @@ func startProgram(job *job) {
 	}
 
 	go func() {
-		for {
-			<-job.stop
+		for <-job.stop {
 			fmt.Printf("Got signal to stop '%s'.\n", prog.Name)
 			autoRestart = false
 			stopProg()
@@ -96,8 +95,7 @@ func startProgram(job *job) {
 	}()
 
 	go func() {
-		for {
-			<-job.start
+		for <-job.start {
 			fmt.Printf("Got signal to start '%s'.\n", prog.Name)
 			autoRestart = *job.service.AutoRestart == true
 			if runningCmd != nil {
@@ -111,8 +109,8 @@ func startProgram(job *job) {
 	}()
 
 	go func() {
-		for {
-			<-job.restart
+		for <-job.restart {
+
 			fmt.Printf("Got signal to restart '%s'\n.", prog.Name)
 			autoRestart = *job.service.AutoRestart == true
 			stopProg()
@@ -124,8 +122,7 @@ func startProgram(job *job) {
 
 	// auto-restart on crash / stop
 	go func() {
-		for {
-			<-onStopped
+		for <-onStopped {
 			if autoRestart {
 				go start()
 			}
@@ -212,6 +209,9 @@ func start(config *shell.Configuration) {
 		if jobs != nil {
 			for _, job := range jobs {
 				job.stop <- true
+				close(job.stop)
+				close(job.start)
+				close(job.restart)
 			}
 		}
 	}
