@@ -11,7 +11,7 @@
       "ForwardStdout": true,
       "AutoRestart": true,
       "ForwardStderror": true,
-      "ForwardStdin": true
+      "ForwardStdin": false
     },
     {
       "Name": "nvim-server",
