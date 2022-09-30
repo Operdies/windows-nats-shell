@@ -27,13 +27,40 @@ var (
 	attachThreadInput        = user32.MustFindProc("AttachThreadInput")
 	getWindowThreadProcessId = user32.MustFindProc("GetWindowThreadProcessId")
 	systemParametersInfoA    = user32.MustFindProc("SystemParametersInfoA")
+	procGetMessage           = user32.MustFindProc("GetMessageW")
 
 	setWinEventHook = user32.MustFindProc("SetWinEventHook")
 	unhookWinEvent  = user32.MustFindProc("UnhookWinEvent")
 
 	kernel             = syscall.MustLoadDLL("kernel32.dll")
 	getCurrentThreadId = kernel.MustFindProc("GetCurrentThreadId")
+	getModuleHandle    = kernel.MustFindProc("GetModuleHandleA")
+	// loadLibrary        = kernel.MustFindProc("LoadLibrary")
+	getProcAddress = kernel.MustFindProc("GetProcAddress")
 )
+
+func GetMessage(msg *wintypes.MSG, hwnd wintypes.HWND, msgFilterMin uint32, msgFilterMax uint32) int {
+	ret, _, _ := procGetMessage.Call(
+		uintptr(unsafe.Pointer(msg)),
+		uintptr(hwnd),
+		uintptr(msgFilterMin),
+		uintptr(msgFilterMax))
+	return int(ret)
+}
+func GetProcAddress(hModule wintypes.HMODULE, lpProcName wintypes.LPCSTR) uintptr {
+	r, _, _ := getProcAddress.Call(uintptr(hModule), uintptr(lpProcName))
+	return r
+}
+
+// func LoadLibrary(lpLibFileName wintypes.LPCSTR) wintypes.HMODULE {
+// 	r, _, _ := loadLibrary.Call(uintptr(lpLibFileName))
+// 	return wintypes.HMODULE(r)
+// }
+
+func GetModuleHandleA(lpModuleName wintypes.LPCSTR) wintypes.HMODULE {
+	res, _, _ := getModuleHandle.Call(uintptr(lpModuleName))
+	return wintypes.HMODULE(res)
+}
 
 func EnumWindows(lpEnumFunc uintptr, lParam wintypes.LPARAM) (err error) {
 	res, _, err := enumWindows.Call(
@@ -113,6 +140,7 @@ func GetVisibleWindows() []wintypes.Window {
 }
 
 func SetWindowsHookExW(idHook int, lpfn uintptr, hInstance wintypes.HINSTANCE, threadId wintypes.DWORD) wintypes.HHOOK {
+	fmt.Printf("hInstance: %v\n", hInstance)
 	r0, _, err := setWindowsHookExA.Call(
 		uintptr(idHook),
 		lpfn,
@@ -151,7 +179,7 @@ func SystemParametersInfoA(uiAction uint, uiParam uint, pvParam wintypes.PVOID, 
 	return wintypes.BOOL(r)
 }
 
-func UnhookWindowsHookEx(hhk int) {
+func UnhookWindowsHookEx(hhk wintypes.HHOOK) {
 	syscall.SyscallN(unhookWindowsHookEx.Addr(), uintptr(hhk))
 }
 
@@ -188,7 +216,7 @@ func CBT(callback func(int)) {
 		log.Fatal("Hook = 0")
 		return
 	}
-	defer UnhookWindowsHookEx(int(hook))
+	defer UnhookWindowsHookEx(hook)
 
 	fmt.Println("Waiting for any event xD")
 	wg.Wait()

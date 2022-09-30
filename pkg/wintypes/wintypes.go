@@ -35,6 +35,7 @@ type (
 	DWORD_PTR     uintptr
 	LPARAM        LONG_PTR
 	LRESULT       LONG_PTR
+	LPCSTR        uintptr
 	PVOID         uintptr
 	LPDWORD       DWORD_PTR
 	WPARAM        uintptr

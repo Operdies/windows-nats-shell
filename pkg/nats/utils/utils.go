@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"encoding/json"
+	"gopkg.in/yaml.v3"
 )
 
 func Contains[T comparable](haystack []T, needle T) bool {
@@ -35,12 +35,12 @@ func Filter[T1 any](source []T1, filter func(T1) bool) []T1 {
 }
 
 func EncodeAny[T any](value T) []byte {
-	result, _ := json.Marshal(value)
+	result, _ := yaml.Marshal(value)
 	return result
 }
 
 func DecodeAny[T any](buffer []byte) T {
 	var result T
-	json.Unmarshal(buffer, &result)
+	yaml.Unmarshal(buffer, &result)
 	return result
 }

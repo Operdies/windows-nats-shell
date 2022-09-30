@@ -1,0 +1,37 @@
+services:
+  cgo:
+    custom: {}
+    executable: "go"
+    arguments:
+      - run
+      - ./cmd/winapi-cgo-test/
+    workingdirectory: C:/Users/alexw/repos/minimalist-shell
+    autorestart: false
+    forwardstdout: true
+    forwardstderror: true
+    forwardstdin: true
+    environment: []
+  nvim-server:
+    custom: {}
+    executable: nvim.exe
+    arguments:
+      - --headless
+      - --listen
+      - 0.0.0.0:6666
+    workingdirectory: C:/Users/alexw/repos
+    autorestart: true
+    forwardstdout: false
+    forwardstderror: false
+    forwardstdin: false
+    environment: []
+  windows-nats-driver:
+    custom: {}
+    executable: ./windows-nats-driver.exe
+    arguments: []
+    workingdirectory: C:/Users/alexw/repos/minimalist-shell
+    autorestart: true
+    forwardstdout: true
+    forwardstderror: true
+    forwardstdin: false
+    environment: []
+

@@ -179,14 +179,34 @@ func (client Publisher) RestartShell() {
 	client.nc.Publish(shell.RestartShell, []byte{})
 }
 
-func (client Subscriber) Config(callback func() shell.Configuration) {
+func (client Subscriber) QuitShell(callback func() error) {
+	client.nc.Subscribe(shell.QuitShell, func(msg *nats.Msg) {
+		err := callback()
+		msg.Respond(response(err))
+	})
+}
+
+func (client Requester) QuitShell() error {
+	msg, _ := client.nc.Request(shell.QuitShell, nil, client.timeout)
+	return utils.DecodeAny[error](msg.Data)
+}
+
+func (client Subscriber) Config(callback func(string) *shell.Service) {
 	client.nc.Subscribe(shell.Config, func(msg *nats.Msg) {
-		config := callback()
+		key := utils.DecodeAny[string](msg.Data)
+		config := callback(key)
 		msg.Respond(utils.EncodeAny(config))
 	})
 }
 
-func (client Requester) Config() shell.Configuration {
-	msg, _ := client.nc.Request(shell.Config, nil, client.timeout)
-	return utils.DecodeAny[shell.Configuration](msg.Data)
+func (client Requester) Config(name string) shell.Service {
+	msg, _ := client.nc.Request(shell.Config, []byte(name), client.timeout)
+	return utils.DecodeAny[shell.Service](msg.Data)
+}
+
+func (client Subscriber) ShellConfig(callback func() shell.Configuration) {
+	client.nc.Subscribe(shell.ShellConfig, func(msg *nats.Msg) {
+		config := callback()
+		msg.Respond(utils.EncodeAny(config))
+	})
 }

@@ -11,7 +11,9 @@ const (
 	StartService = "Shell.StartService"
 	// Restart the shell
 	RestartShell = "Shell.Restart"
-	// Get the currently loaded config
+	// Get the full shell config
+	ShellConfig = "Shell.ShellConfig"
+	// Get the config of a loaded service
 	Config = "Shell.Config"
 	// Set a new config
 	SetConfig = "Shell.SetConfig"
@@ -19,6 +21,8 @@ const (
 	AddService = "Shell.AddService"
 	// Remove an existing service
 	RemoveService = "Shell.RemoveService"
+	// Quit the shell
+	QuitShell = "Shell.Quit"
 )
 
 type Service struct {
