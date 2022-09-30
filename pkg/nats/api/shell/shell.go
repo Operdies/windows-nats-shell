@@ -11,7 +11,7 @@ const (
 	StartService = "Shell.StartService"
 	// Restart the shell
 	RestartShell = "Shell.Restart"
-  // Get the currently loaded config
+	// Get the currently loaded config
 	Config = "Shell.Config"
 	// Set a new config
 	SetConfig = "Shell.SetConfig"
@@ -22,9 +22,7 @@ const (
 )
 
 type Service struct {
-	Config map[string]string
-	// Some human friendly name
-	Name string
+	Custom map[string]string
 	// The full path to the exectuable file
 	Executable string
 	Arguments  []string
@@ -39,5 +37,5 @@ type Service struct {
 }
 
 type Configuration struct {
-	Services []Service
+	Services map[string]Service
 }

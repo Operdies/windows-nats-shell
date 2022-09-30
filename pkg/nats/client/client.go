@@ -181,13 +181,12 @@ func (client Publisher) RestartShell() {
 
 func (client Subscriber) Config(callback func() shell.Configuration) {
 	client.nc.Subscribe(shell.Config, func(msg *nats.Msg) {
-    config := callback()
+		config := callback()
 		msg.Respond(utils.EncodeAny(config))
 	})
 }
 
 func (client Requester) Config() shell.Configuration {
-  msg, _ := client.nc.Request(shell.Config, nil, client.timeout)
-  return utils.DecodeAny[shell.Configuration](msg.Data)
+	msg, _ := client.nc.Request(shell.Config, nil, client.timeout)
+	return utils.DecodeAny[shell.Configuration](msg.Data)
 }
-

@@ -35,12 +35,12 @@ func Filter[T1 any](source []T1, filter func(T1) bool) []T1 {
 }
 
 func EncodeAny[T any](value T) []byte {
-  result, _ := json.Marshal(value)
-  return result
+	result, _ := json.Marshal(value)
+	return result
 }
 
 func DecodeAny[T any](buffer []byte) T {
-  var result T 
-  json.Unmarshal(buffer, &result)
-  return result
+	var result T
+	json.Unmarshal(buffer, &result)
+	return result
 }

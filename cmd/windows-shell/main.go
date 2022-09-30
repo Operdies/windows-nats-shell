@@ -27,13 +27,6 @@ func parseCfg(path string) (config *shell.Configuration, err error) {
 	if err != nil {
 		return
 	}
-	added := map[string]string{}
-	for _, service := range cfg.Services {
-		if _, exists := added[service.Name]; exists {
-			err = fmt.Errorf("Multiple services with the name '%s' defined.", service.Name)
-			return
-		}
-	}
 	config = &cfg
 	return &cfg, nil
 }
@@ -98,11 +91,8 @@ func start(config *shell.Configuration) {
 
 		jobs = map[string]*service.ProcessJob{}
 
-		for _, ser := range config.Services {
-			if _, ok := jobs[ser.Name]; ok {
-				return fmt.Errorf("Duplicate definition for service '%s'\n", ser.Name)
-			}
-			jobs[ser.Name] = service.NewProcessJob(ser)
+		for name, ser := range config.Services {
+			jobs[name] = service.NewProcessJob(name, ser)
 		}
 
 		for _, job := range jobs {
@@ -121,21 +111,21 @@ func start(config *shell.Configuration) {
 	client.Subscribe.StartService(func(s string) error {
 		job, ok := jobs[s]
 		if ok {
-      return job.Start()
+			return job.Start()
 		}
 		return fmt.Errorf("Service '%s' is not configured.", s)
 	})
 	client.Subscribe.StopService(func(s string) error {
 		job, ok := jobs[s]
 		if ok {
-      return job.Stop()
+			return job.Stop()
 		}
 		return fmt.Errorf("Service '%s' is not configured.", s)
 	})
 	client.Subscribe.RestartService(func(s string) error {
 		job, ok := jobs[s]
 		if ok {
-      return job.Restart()
+			return job.Restart()
 		}
 		return fmt.Errorf("Service '%s' is not configured.", s)
 	})

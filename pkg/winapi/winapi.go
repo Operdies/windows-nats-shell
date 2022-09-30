@@ -57,11 +57,11 @@ func SetForegroundWindow(hwnd wintypes.HWND) wintypes.BOOL {
 }
 
 func GetWindowText(hwnd wintypes.HWND, str *uint16, maxCount int32) (len int32, err error) {
-// r0, _, e1 := syscall.SyscallN(getWindowTextW.Addr(), uintptr(hwnd), uintptr(unsafe.Pointer(str)), uintptr(maxCount))
-  r0, _, e1 := getWindowTextW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(str)), uintptr(maxCount))
-  if r0 != 0 {
-    err = e1
-  }
+	// r0, _, e1 := syscall.SyscallN(getWindowTextW.Addr(), uintptr(hwnd), uintptr(unsafe.Pointer(str)), uintptr(maxCount))
+	r0, _, e1 := getWindowTextW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(str)), uintptr(maxCount))
+	if r0 != 0 {
+		err = e1
+	}
 	return
 }
 
@@ -104,12 +104,12 @@ func GetVisibleWindows() []wintypes.Window {
 			_, err := GetWindowText(h, &b[0], int32(len(b)))
 			if err != nil {
 				result[k] = wintypes.Window{Handle: h, Title: syscall.UTF16ToString(b), IsFocused: h == focused}
-        k += 1
+				k += 1
 			}
 		}
 	}
 
-  return result[:k]
+	return result[:k]
 }
 
 func SetWindowsHookExW(idHook int, lpfn uintptr, hInstance wintypes.HINSTANCE, threadId wintypes.DWORD) wintypes.HHOOK {

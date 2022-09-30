@@ -2,7 +2,7 @@ package wintypes
 
 // SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, SPIF_+UPDATEINIFILE)
 const (
-	WH_KEYBOARD = 2
+	WH_KEYBOARD    = 2
 	WH_KEYBOARD_LL = 13
 	TRUE           = 1
 	FALSE          = 0
@@ -16,9 +16,8 @@ const (
 	WH_CBT         = 5
 	WH_SHELL       = 10
 
-
-  WINEVENT_OUTOFCONTEXT = 0 
-  WINEVENT_INCONTEXT = 4
+	WINEVENT_OUTOFCONTEXT = 0
+	WINEVENT_INCONTEXT    = 4
 )
 
 // https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types

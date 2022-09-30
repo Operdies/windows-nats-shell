@@ -1,4 +1,5 @@
-package windows 
+package windows
+
 const (
 	// Poll for visible windows
 	GetWindows = "Windows.GetWindows"
