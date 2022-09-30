@@ -1,5 +1,4 @@
 //go:build windows && amd64
-// +build windows,amd64
 
 package main
 
@@ -8,13 +7,12 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/nats-io/nats.go"
 
@@ -118,9 +116,6 @@ func ListenIndefinitely() {
 		if ok {
 			err = startDetachedProcess(val)
 		} else {
-			// As a fallback, just attempt to start it with 'cmd /c Start'
-			// This makes sense for e.g. URLs or any other application which is able
-			// to handle some file extension or URI scheme
 			err = startDetachedProcess(requested)
 		}
 
@@ -133,15 +128,15 @@ func ListenIndefinitely() {
 }
 
 func startDetachedProcess(proc string) error {
-	// We need to pass in some empty quotes so the start command can't misinterpret the first part of paths with spaces
-	// as the window title
-	cmd := exec.Command("cmd.exe")
-	cmd.Args = nil
-	// Forego any escaping because 'cmd /C start' is really particular
-	cmd.SysProcAttr = &syscall.SysProcAttr{}
-	cmd.SysProcAttr.CmdLine = `/C start "sos" "` + proc + `"`
-	fmt.Println("Launching:", cmd.SysProcAttr.CmdLine)
-	return cmd.Start()
+	const sw_shownormal = 1
+
+  // b := make([]byte, 0)
+  empty := 0
+  procb := []byte(proc)
+  procp := unsafe.Pointer(&procb[0])
+  _, err := winapi.ShellExecute(0, wintypes.LPCSTR(empty), wintypes.LPCSTR(procp), wintypes.LPCSTR(empty), wintypes.LPCSTR(empty), sw_shownormal)
+	// shellExecute(0, "", proc, "", "", sw_shownormal)
+	return err
 }
 
 func getPathItems() map[string]string {

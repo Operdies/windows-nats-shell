@@ -37,7 +37,18 @@ var (
 	getModuleHandle    = kernel.MustFindProc("GetModuleHandleA")
 	// loadLibrary        = kernel.MustFindProc("LoadLibrary")
 	getProcAddress = kernel.MustFindProc("GetProcAddress")
+
+	shell32       = syscall.MustLoadDLL("shell32.dll")
+	shellExecuteW = shell32.MustFindProc("ShellExecuteA")
 )
+
+func ShellExecute(hwnd wintypes.HWND, lpOperation, lpFile, lpParameters, lpDirectory wintypes.LPCSTR, nShowCmd int) (wintypes.HINSTANCE, error) {
+	r, _, err := shellExecuteW.Call(uintptr(hwnd), uintptr(lpOperation), uintptr(lpFile), uintptr(lpParameters), uintptr(lpDirectory), uintptr(nShowCmd))
+  if r >= 32 {
+    err = nil
+  }
+	return wintypes.HINSTANCE(r), err
+}
 
 func GetMessage(msg *wintypes.MSG, hwnd wintypes.HWND, msgFilterMin uint32, msgFilterMax uint32) int {
 	ret, _, _ := procGetMessage.Call(

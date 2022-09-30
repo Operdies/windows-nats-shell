@@ -55,7 +55,10 @@ func CombineErrors(errors ...error) error {
 }
 
 func (j *ProcessJob) Start() error {
-	fmt.Printf("Start %s\n", j.name)
+	if j.service.Executable == "" {
+		return fmt.Errorf("Service %s has no configured executable.", j.name)
+	}
+	// fmt.Printf("Start %s\n", j.name)
 
 	if j.cmd != nil {
 		return fmt.Errorf("Process %s is already running.", j.name)
@@ -95,7 +98,7 @@ func (j *ProcessJob) Start() error {
 	err := cmd.Start()
 
 	if err != nil {
-		fmt.Printf("Process %s failed to start. Auto-restart disabled.\n", j.name)
+		fmt.Printf("Process %s failed to start. %v\n", j.name, err.Error())
 		j.restart = false
 		return err
 	}
@@ -121,7 +124,7 @@ func (j *ProcessJob) Start() error {
 }
 
 func (j *ProcessJob) Stop() (err error) {
-	fmt.Printf("Stop %s\n", j.name)
+	// fmt.Printf("Stop %s\n", j.name)
 	j.restart = false
 	if j.cmd == nil {
 		return fmt.Errorf("Process %s is not running.", j.name)
@@ -139,7 +142,7 @@ func (j *ProcessJob) Stop() (err error) {
 }
 
 func (j *ProcessJob) Restart() error {
-	fmt.Printf("Restart %s\n", j.name)
+	// fmt.Printf("Restart %s\n", j.name)
 
 	stopError := j.Stop()
 	startErr := j.Start()

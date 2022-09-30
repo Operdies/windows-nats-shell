@@ -67,8 +67,9 @@ func (client Requester) LaunchProgram(program string) error {
 	return errors.New(string(msg.Data))
 }
 
-func (client Requester) SetFocus(window uint64) {
-	client.nc.Request(windows.SetFocus, utils.EncodeAny(window), time.Second)
+func (client Requester) SetFocus(window uint64) bool {
+  msg, _ := client.nc.Request(windows.SetFocus, utils.EncodeAny(window), time.Second)
+  return utils.DecodeAny[bool](msg.Data)
 }
 
 func (client Client) Close() {

@@ -4,7 +4,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"github.com/operdies/windows-nats-shell/cmd/windows-shell/service"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
+	"gopkg.in/yaml.v3"
 )
 
 func parseCfg(path string) (config *shell.Configuration, err error) {
@@ -23,12 +23,13 @@ func parseCfg(path string) (config *shell.Configuration, err error) {
 		return
 	}
 	var cfg shell.Configuration
-	err = json.Unmarshal(content, &cfg)
+	err = yaml.Unmarshal(content, &cfg)
 	if err != nil {
 		return
 	}
 	config = &cfg
-	return &cfg, nil
+	fmt.Println(cfg)
+	return
 }
 
 func loadConfig() *string {
@@ -60,16 +61,16 @@ func getConfigPaths() []string {
 	result := make([]string, 0)
 	exeDir := getExeDir()
 	if exeDir != "" {
-		result = append(result, path.Join(exeDir, "config.json"))
+		result = append(result, path.Join(exeDir, "config.yml"))
 	}
 
 	wd, _ := os.Getwd()
-	result = append(result, path.Join(wd, "config.json"))
+	result = append(result, path.Join(wd, "config.yml"))
 
 	return result
 }
 
-func start(config *shell.Configuration) {
+func start(config *shell.Configuration) bool {
 	fmt.Println("Starting shell!")
 
 	home, _ := os.UserHomeDir()
@@ -135,12 +136,22 @@ func start(config *shell.Configuration) {
 		quit <- true
 		return nil
 	})
+	client.Subscribe.QuitShell(func() error {
+		quit <- false
+		return nil
+	})
 
-	client.Subscribe.Config(func() shell.Configuration {
+	client.Subscribe.Config(func(key string) *shell.Service {
+		if section, ok := config.Services[key]; ok {
+			return &section
+		}
+		return nil
+	})
+	client.Subscribe.ShellConfig(func() shell.Configuration {
 		return *config
 	})
 
-	<-quit
+	return <-quit
 }
 
 func main() {
@@ -156,8 +167,7 @@ func main() {
 
 	go flushStdinPipeIndefinitely()
 
-	for {
-		start(config)
+	for start(config) {
 		config2, err := parseCfg(*configFile)
 		if err != nil {
 			fmt.Println("Error in reloaded config:", err.Error())

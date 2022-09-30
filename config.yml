@@ -26,8 +26,10 @@ services:
     environment: []
   windows-nats-driver:
     custom: {}
-    executable: ./windows-nats-driver.exe
-    arguments: []
+    executable: go
+    arguments:
+      - run
+      - ./cmd/windows-nats-driver/
     workingdirectory: C:/Users/alexw/repos/minimalist-shell
     autorestart: true
     forwardstdout: true
