@@ -2,9 +2,8 @@
   "Wallpaper": {
     "Path": "C:/Users/alexw/Documents/wallpaper.png"
   },
-  "Services": [
-    {
-      "Name": "windows-nats-driver",
+  "Services": {
+    "windows-nats-driver": {
       "Executable": "./windows-nats-driver.exe",
       "Arguments": [],
       "WorkingDirectory": "C:/Users/alexw/repos/minimalist-shell",
@@ -13,8 +12,7 @@
       "ForwardStderror": true,
       "ForwardStdin": false
     },
-    {
-      "Name": "nvim-server",
+    "nvim-server": {
       "Executable": "nvim.exe",
       "Arguments": [
         "--headless",
@@ -22,10 +20,10 @@
         "0.0.0.0:6666"
       ],
       "WorkingDirectory": "C:/Users/alexw/repos",
-      "ForwardStdout": true,
+      "ForwardStdout": false,
       "AutoRestart": true,
-      "ForwardStderror": true,
-      "ForwardStdin": true
+      "ForwardStderror": false,
+      "ForwardStdin": false
     }
-  ]
+  }
 }
