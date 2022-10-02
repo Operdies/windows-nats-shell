@@ -45,9 +45,9 @@ var (
 	assocQueryString = Shlwapi.MustFindProc("AssocQueryStringA")
 )
 
-func AssocQueryString(flags wintypes.AssocF, str wintypes.AssocStr, pszAssoc, pszExtra wintypes.LPCSTR, pszOut wintypes.LPSTR, pcchOut uintptr) wintypes.LWSTDAPI {
+func AssocQueryString(flags wintypes.AssocF, str wintypes.AssocStr, pszAssoc, pszExtra wintypes.LPCSTR, pszOut wintypes.LPSTR, pcchOut uintptr) wintypes.HRESULT {
 	r, _, _ := assocQueryString.Call(uintptr(flags), uintptr(str), uintptr(pszAssoc), uintptr(pszExtra), uintptr(pszOut), pcchOut)
-	return wintypes.LWSTDAPI(r)
+	return wintypes.HRESULT(r)
 }
 
 func ShellExecute(hwnd wintypes.HWND, lpOperation, lpFile, lpParameters, lpDirectory wintypes.LPCSTR, nShowCmd int) (wintypes.HINSTANCE, error) {
@@ -158,7 +158,7 @@ func GetVisibleWindows() []wintypes.Window {
 	return result[:k]
 }
 
-func SetWindowsHookExW(idHook int, lpfn uintptr, hInstance wintypes.HINSTANCE, threadId wintypes.DWORD) wintypes.HHOOK {
+func SetWindowsHookExW(idHook wintypes.WH_EVENTTYPE, lpfn uintptr, hInstance wintypes.HINSTANCE, threadId wintypes.DWORD) wintypes.HHOOK {
 	fmt.Printf("hInstance: %v\n", hInstance)
 	r0, _, err := setWindowsHookExA.Call(
 		uintptr(idHook),

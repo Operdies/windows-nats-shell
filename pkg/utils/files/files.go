@@ -6,8 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"unsafe"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/operdies/windows-nats-shell/pkg/winapi"
+	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
 var (
@@ -35,7 +38,9 @@ func (w *WatchedDir) watchEvents() {
 			_, exists := w.files[key]
 			// Overwrite if it exists
 			if evt.Op == fsnotify.Create {
-				w.files[key] = evt.Name
+				if includeFile(evt.Name) {
+					w.files[key] = evt.Name
+				}
 			} else if evt.Op == fsnotify.Remove && exists {
 				delete(w.files, key)
 			}
@@ -52,32 +57,65 @@ func (w *WatchedDir) WaitForIndex() {
 }
 
 var (
-	fileExtensionFilter = map[string]bool{
-		"exe":  true,
-		"lnk":  true,
-		"bat":  true,
-		"ps1":  true,
-		"url":  true,
-		"html": true,
-		"png":  true,
-		"jpg":  true,
-		"gif":  true,
+	// This is like 99% of files. Let's just hardcode them
+	hardcodedFilter = map[string]bool{
+		".exe":  true,
+		".lnk":  true,
+		".bat":  true,
+		".ps1":  true,
+		".url":  true,
+		".html": true,
+		".png":  true,
+		".jpg":  true,
+		".gif":  true,
+		// I don't care about these files, get out
+		".bin": false,
+		".mof": false,
+		".rtf": false,
 	}
+	registryFilter = sync.Map{}
 )
 
-func extLowerNoDot(s string) string {
+func extLower(s string) string {
 	s = filepath.Ext(s)
 	if len(s) > 0 {
-		return strings.ToLower(s)[1:]
+		return strings.ToLower(s)
 	}
 	return s
 }
 
-func includeFile(f fs.DirEntry) bool {
-	if f.IsDir() {
+func includeFile(name string) bool {
+	// v, ok := fileExtensionFilter[extLower(f.Name())]
+	ext := extLower(name)
+	if ext == "" || ext == "." {
 		return false
 	}
-	v, ok := fileExtensionFilter[extLowerNoDot(f.Name())]
+	var ok bool
+	var v bool
+	if v, ok := hardcodedFilter[ext]; ok {
+		return v && ok
+	}
+	if ext == ".exe" {
+		return true
+	}
+	_v, ok := registryFilter.Load(ext)
+	if _v != nil {
+		v = _v.(bool)
+	}
+	// check if the extension is supported
+	if !ok {
+		bytes := []byte(ext)
+		ptr := unsafe.Pointer(&bytes[0])
+		var size wintypes.DWORD = 200
+		sizePtr := unsafe.Pointer(&size)
+		res := make([]byte, size)
+		resultPtr := unsafe.Pointer(&res[0])
+		hResult := winapi.AssocQueryString(wintypes.ASSOCF_NONE, wintypes.ASSOCSTR_FRIENDLYDOCNAME, wintypes.LPCSTR(ptr), 0, wintypes.LPSTR(resultPtr), uintptr(sizePtr))
+		v = wintypes.SUCCEEDED(hResult)
+		// resStr := res[:size]
+		// fmt.Printf("Extension %s supported: %v (%v) (%v)\n", ext, v, string(resStr), hResult)
+		registryFilter.Store(ext, v)
+	}
 	return ok && v
 }
 
@@ -99,13 +137,17 @@ func (w *WatchedDir) indexFiles() {
 		defer w.indexLock.Unlock()
 		items := map[string]string{}
 		filepath.WalkDir(w.root, func(path string, d fs.DirEntry, err error) error {
-			if pathEqual(w.root, path) {
-				return nil
+			if d.IsDir() {
+				if w.recursive {
+					return nil
+				} else {
+					if pathEqual(w.root, path) {
+						return nil
+					}
+					return filepath.SkipDir
+				}
 			}
-			if d.IsDir() && w.recursive == false {
-				return filepath.SkipDir
-			}
-			if includeFile(d) {
+			if includeFile(d.Name()) {
 				items[getKey(d.Name())] = path
 			}
 			return nil
