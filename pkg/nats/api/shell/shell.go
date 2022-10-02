@@ -14,7 +14,7 @@ const (
 	// Get the full shell config
 	ShellConfig = "Shell.ShellConfig"
 	// Get the config of a loaded service
-	Config = "Shell.Config"
+	GetService = "Shell.Config"
 	// Set a new config
 	SetConfig = "Shell.SetConfig"
 	// Add a new service
@@ -23,6 +23,8 @@ const (
 	RemoveService = "Shell.RemoveService"
 	// Quit the shell
 	QuitShell = "Shell.Quit"
+  // Some shell event happened 
+  ShellEvent = "Shell.Event"
 )
 
 type Service struct {
@@ -42,4 +44,8 @@ type Service struct {
 
 type Configuration struct {
 	Services map[string]Service
+}
+
+type Event struct {
+  Event string
 }

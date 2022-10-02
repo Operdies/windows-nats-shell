@@ -68,8 +68,8 @@ func (client Requester) LaunchProgram(program string) error {
 }
 
 func (client Requester) SetFocus(window uint64) bool {
-  msg, _ := client.nc.Request(windows.SetFocus, utils.EncodeAny(window), time.Second)
-  return utils.DecodeAny[bool](msg.Data)
+	msg, _ := client.nc.Request(windows.SetFocus, utils.EncodeAny(window), time.Second)
+	return utils.DecodeAny[bool](msg.Data)
 }
 
 func (client Client) Close() {
@@ -193,7 +193,7 @@ func (client Requester) QuitShell() error {
 }
 
 func (client Subscriber) Config(callback func(string) *shell.Service) {
-	client.nc.Subscribe(shell.Config, func(msg *nats.Msg) {
+	client.nc.Subscribe(shell.GetService, func(msg *nats.Msg) {
 		key := utils.DecodeAny[string](msg.Data)
 		config := callback(key)
 		msg.Respond(utils.EncodeAny(config))
@@ -201,7 +201,7 @@ func (client Subscriber) Config(callback func(string) *shell.Service) {
 }
 
 func (client Requester) Config(name string) shell.Service {
-	msg, _ := client.nc.Request(shell.Config, []byte(name), client.timeout)
+	msg, _ := client.nc.Request(shell.GetService, []byte(name), client.timeout)
 	return utils.DecodeAny[shell.Service](msg.Data)
 }
 
@@ -209,5 +209,16 @@ func (client Subscriber) ShellConfig(callback func() shell.Configuration) {
 	client.nc.Subscribe(shell.ShellConfig, func(msg *nats.Msg) {
 		config := callback()
 		msg.Respond(utils.EncodeAny(config))
+	})
+}
+
+func (client Publisher) ShellEvent(evt shell.Event) {
+	client.nc.Publish(shell.ShellEvent, utils.EncodeAny(evt))
+}
+
+func (client Subscriber) ShellEvent(callback func(shell.Event)) {
+	client.nc.Subscribe(shell.ShellEvent, func(msg *nats.Msg) {
+		evt := utils.DecodeAny[shell.Event](msg.Data)
+		callback(evt)
 	})
 }

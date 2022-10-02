@@ -1,18 +1,19 @@
 services:
-  cgo:
-    custom: {}
-    executable: "go"
-    arguments:
-      - run
-      - ./cmd/winapi-cgo-test/
-    workingdirectory: C:/Users/alexw/repos/minimalist-shell
+  # The shell-app-runtime is a dependency of shell-event-publisher.
+  # without it, shell events are only published when windows switch focus,
+  # and the events don't contain as much information
+  shell-app-runtime: 
+    executable: C:\Windows\System32\ShellAppRuntime.exe
     autorestart: false
-    forwardstdout: true
-    forwardstderror: true
-    forwardstdin: true
-    environment: []
+  shell-event-publisher:
+    autorestart: false
+    executable: ./bin/shell-event-publisher.exe
+    workingdirectory: C:/Users/alexw/repos/minimalist-shell
+  windows-nats-driver:
+    executable: ./bin/windows-nats-driver.exe
+    workingdirectory: C:/Users/alexw/repos/minimalist-shell
+    autorestart: true
   nvim-server:
-    custom: {}
     executable: nvim.exe
     arguments:
       - --headless
@@ -23,17 +24,3 @@ services:
     forwardstdout: false
     forwardstderror: false
     forwardstdin: false
-    environment: []
-  windows-nats-driver:
-    custom: {}
-    executable: go
-    arguments:
-      - run
-      - ./cmd/windows-nats-driver/
-    workingdirectory: C:/Users/alexw/repos/minimalist-shell
-    autorestart: true
-    forwardstdout: true
-    forwardstderror: true
-    forwardstdin: false
-    environment: []
-

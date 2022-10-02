@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/nats-io/nats.go v1.17.0
-	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8
+	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/yaml.v3 v3.0.1
 )
 
