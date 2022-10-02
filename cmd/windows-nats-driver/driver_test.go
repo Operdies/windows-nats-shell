@@ -7,7 +7,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-
 func TestGetCustomConfig(t *testing.T) {
 	var testString = []byte(`
 custom:
@@ -40,16 +39,16 @@ autorestart: true
 	if result.Launcher.IncludeSystemPath == false {
 		t.Fatal("Expected IncludeSystemPath=true")
 	}
-  scripts := result.Launcher.Sources[0]
-  if scripts.Recursive != true || scripts.Watch != false {
-    t.Fatal("Parse error in scripts")
-  }
-  roaming := result.Launcher.Sources[1]
-  if roaming.Recursive != true || roaming.Watch != false {
-    t.Fatal("Parse error in roaming")
-  }
-  programdata := result.Launcher.Sources[2]
-  if programdata.Recursive != false || programdata.Watch != true {
-    t.Fatal("Parse error in programdata")
-  }
+	scripts := result.Launcher.Sources[0]
+	if scripts.Recursive != true || scripts.Watch != false {
+		t.Fatal("Parse error in scripts")
+	}
+	roaming := result.Launcher.Sources[1]
+	if roaming.Recursive != true || roaming.Watch != false {
+		t.Fatal("Parse error in roaming")
+	}
+	programdata := result.Launcher.Sources[2]
+	if programdata.Recursive != false || programdata.Watch != true {
+		t.Fatal("Parse error in programdata")
+	}
 }

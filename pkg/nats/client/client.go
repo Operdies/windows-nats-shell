@@ -201,9 +201,9 @@ func (client Subscriber) Config(callback func(string) *shell.Service) {
 	})
 }
 
-// Get the request for the named service. 
-// If the empty string is specified, this function attempts to 
-// find the currently executing service based on the environment 
+// Get the request for the named service.
+// If the empty string is specified, this function attempts to
+// find the currently executing service based on the environment
 // variable
 func (client Requester) Config(name string) shell.Service {
 	if name == "" {

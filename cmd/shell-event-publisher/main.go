@@ -27,11 +27,11 @@ func handleConn(conn net.Conn) {
 	defer conn.Close()
 	s := bufio.NewScanner(conn)
 	for s.Scan() {
-    parts := strings.Split(s.Text(), ",")
-    numbers := make([]uint64, 3)
-    for i := 0; i < 3; i++ {
-      numbers[i], _ = strconv.ParseUint(parts[i], 10, 64)
-    }
+		parts := strings.Split(s.Text(), ",")
+		numbers := make([]uint64, 3)
+		for i := 0; i < 3; i++ {
+			numbers[i], _ = strconv.ParseUint(parts[i], 10, 64)
+		}
 		cl.Publish.ShellEvent(shell.NewEvent(int(numbers[0]), uintptr(numbers[1]), uintptr(numbers[2])))
 	}
 }
@@ -52,7 +52,7 @@ func server() {
 }
 
 func main() {
-  hooks.Register()
-  defer hooks.Unregister()
+	hooks.Register()
+	defer hooks.Unregister()
 	server()
 }

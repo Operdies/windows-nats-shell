@@ -52,9 +52,9 @@ type Service struct {
 func GetCustom[T any](s Service) (result T, err error) {
 	custom := s.Custom
 	buffer, err := yaml.Marshal(custom)
-  if err != nil {
-    return
-  }
+	if err != nil {
+		return
+	}
 	err = yaml.Unmarshal(buffer, &result)
 	return
 }

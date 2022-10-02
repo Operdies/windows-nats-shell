@@ -40,7 +40,7 @@ func loadConfig() *string {
 	}
 
 	for _, cand := range getConfigPaths() {
-    fmt.Printf("Trying %s\n", cand)
+		fmt.Printf("Trying %s\n", cand)
 		if fileExists(cand) {
 			return &cand
 		}
@@ -63,11 +63,11 @@ func getConfigPaths() []string {
 	result := make([]string, 0)
 	exeDir := getExeDir()
 	if exeDir != "" {
-    parent := path.Dir(exeDir)
-    fmt.Printf("Path %s has parent %s\n", exeDir, parent)
+		parent := path.Dir(exeDir)
+		fmt.Printf("Path %s has parent %s\n", exeDir, parent)
 		result = append(result, path.Join(exeDir, "config.yml"))
-    result = append(result, path.Join(path.Dir(exeDir), "config.yml"))
-    fmt.Println(result)
+		result = append(result, path.Join(path.Dir(exeDir), "config.yml"))
+		fmt.Println(result)
 	}
 
 	wd, _ := os.Getwd()

@@ -54,10 +54,10 @@ type (
 )
 
 func SUCCEEDED(code HRESULT) bool {
-  // The highest bit of an HRESULT indicates success
-  // If it is set to 0 it indicates success. Otherwise the object contains a failure code
-  thirtyFirst := (code >> 30) == 0
-  return thirtyFirst
+	// The highest bit of an HRESULT indicates success
+	// If it is set to 0 it indicates success. Otherwise the object contains a failure code
+	thirtyFirst := (code >> 30) == 0
+	return thirtyFirst
 }
 
 const (

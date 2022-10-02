@@ -119,14 +119,35 @@ func mergeMaps(maps ...map[string]string) map[string]string {
 	return result
 }
 
-func getFriendlyNames() []string {
-	result := make([]string, 0, 100)
-	for _, w := range watchers {
-		for friendly := range w.Files() {
-			result = append(result, friendly)
-		}
+func getKeys[T1 comparable, T2 any](source map[T1]T2) []T1 {
+	result := make([]T1, len(source))
+	k := 0
+	for v := range source {
+		result[k] = v
+		k = k + 1
 	}
+
 	return result
+}
+func getFriendlyNames() []string {
+	maps := make([]map[string]string, 0, len(watchers))
+	for _, w := range watchers {
+		maps = append(maps, w.Files())
+	}
+
+	// Reverse the maps array. mergeMaps overwrites
+	// the keys whenever a new key is found, but
+	// launchProgram uses the first match it finds.
+	// This is to ensure that the selected program
+	// actually matches the program which is executed.
+	// This probably doesn't matter since only
+	// the friendly name is presented anyway (rigth now)
+	for i, j := 0, len(maps)-1; i < j; i, j = i+1, j-1 {
+		maps[i], maps[j] = maps[j], maps[i]
+	}
+
+	merged := mergeMaps(maps...)
+	return getKeys(merged)
 }
 
 func getPathExecutable(s string) (prog string, err error) {

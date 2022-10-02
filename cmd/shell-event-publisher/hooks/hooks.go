@@ -1,14 +1,14 @@
-package hooks 
+package hooks
 
 import (
-  // #include <hooks.h>
-  "C"
-  )
+	// #include <hooks.h>
+	"C"
+)
 
-func Register(){
-  C.RegisterHook()
+func Register() {
+	C.RegisterHook()
 }
 
-func Unregister(){
-  C.UnregisterHook()
+func Unregister() {
+	C.UnregisterHook()
 }

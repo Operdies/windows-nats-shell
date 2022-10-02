@@ -13,28 +13,6 @@ var (
 	knownFileExtensions = map[string]bool{}
 )
 
-func getValues[T1 comparable, T2 any](source map[T1]T2) []T2 {
-	result := make([]T2, len(source))
-	k := 0
-	for _, v := range source {
-		result[k] = v
-		k = k + 1
-	}
-
-	return result
-}
-
-func getKeys[T1 comparable, T2 any](source map[T1]T2) []T1 {
-	result := make([]T1, len(source))
-	k := 0
-	for v := range source {
-		result[k] = v
-		k = k + 1
-	}
-
-	return result
-}
-
 type WatchedDir struct {
 	files     map[string]string
 	root      string

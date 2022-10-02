@@ -29,4 +29,3 @@ func Filter[T1 any](source []T1, filter func(T1) bool) []T1 {
 	}
 	return result[:k]
 }
-
