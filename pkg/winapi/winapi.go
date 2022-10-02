@@ -4,7 +4,6 @@
 package winapi
 
 import (
-	"fmt"
 	"log"
 	"sync"
 	"syscall"
@@ -159,7 +158,6 @@ func GetVisibleWindows() []wintypes.Window {
 }
 
 func SetWindowsHookExW(idHook wintypes.WH_EVENTTYPE, lpfn uintptr, hInstance wintypes.HINSTANCE, threadId wintypes.DWORD) wintypes.HHOOK {
-	fmt.Printf("hInstance: %v\n", hInstance)
 	r0, _, err := setWindowsHookExA.Call(
 		uintptr(idHook),
 		lpfn,
@@ -198,69 +196,7 @@ func SystemParametersInfoA(uiAction uint, uiParam uint, pvParam wintypes.PVOID, 
 	return wintypes.BOOL(r)
 }
 
-func UnhookWindowsHookEx(hhk wintypes.HHOOK) {
-	syscall.SyscallN(unhookWindowsHookEx.Addr(), uintptr(hhk))
-}
-
 func GetCurrentThreadId() wintypes.DWORD {
 	r0, _, _ := syscall.SyscallN(getCurrentThreadId.Addr())
 	return wintypes.DWORD(r0)
-}
-
-func CBT(callback func(int)) {
-	var cbt struct {
-		callback    uintptr
-		go_callback func(int)
-	}
-
-	cbt.go_callback = callback
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	if cbt.callback == 0 {
-		var cb wintypes.HOOKPROC
-		cb = func(ncode int, wparam wintypes.WPARAM, lparam wintypes.LPARAM) wintypes.LRESULT {
-			fmt.Println("New event!")
-			cbt.go_callback(ncode)
-			fmt.Printf("ncode: %v\n", ncode)
-			wg.Done()
-			return CallNextHookEx(0, int(ncode), wparam, lparam)
-		}
-		cbt.callback = syscall.NewCallback(cb)
-	}
-
-	hook := SetWindowsHookExW(wintypes.WH_SHELL, cbt.callback, 0, GetCurrentThreadId())
-
-	if hook == 0 {
-		log.Fatal("Hook = 0")
-		return
-	}
-	defer UnhookWindowsHookEx(hook)
-
-	fmt.Println("Waiting for any event xD")
-	wg.Wait()
-	fmt.Println("Got event. Exiting and unhooking.")
-}
-
-func SetWinEventHook(eventMin, eventMax wintypes.DWORD,
-	hmodWinEventProc wintypes.HMODULE,
-	pfnWinEventProc wintypes.WINEVENTPROC,
-	idProcess, idThread, dwFlags wintypes.DWORD) wintypes.HWINEVENTHOOK {
-	hhook, _, err := setWinEventHook.Call(uintptr(eventMin),
-		uintptr(eventMax),
-		uintptr(hmodWinEventProc),
-		syscall.NewCallback(pfnWinEventProc),
-		uintptr(idProcess),
-		uintptr(idThread),
-		uintptr(dwFlags))
-
-	if hhook == 0 {
-		log.Fatal(err)
-	}
-	return wintypes.HWINEVENTHOOK(hhook)
-}
-
-func Hooker(fn wintypes.WINEVENTPROC) wintypes.HWINEVENTHOOK {
-	min, max := 0x00000001, 0x7FFFFFFF
-	return SetWinEventHook(wintypes.DWORD(min), wintypes.DWORD(max), 0, fn, 0, 0, wintypes.WINEVENT_OUTOFCONTEXT)
 }

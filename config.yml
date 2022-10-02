@@ -6,6 +6,9 @@ services:
   shell-app-runtime: 
     executable: C:\Windows\System32\ShellAppRuntime.exe
     autorestart: false
+  # This one creates a bottom-most drawing context and renders 
+  # an image. It would be cool if it had some custom shader support
+  shell-background:
   shell-event-publisher:
     autorestart: false
     executable: ./bin/shell-event-publisher.exe

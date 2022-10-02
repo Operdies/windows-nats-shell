@@ -189,18 +189,6 @@ func indexItems(custom customOptions) {
 	}
 }
 
-func handler(hwinEventHook wintypes.HWINEVENTHOOK, event wintypes.DWORD, hwnd wintypes.HWND, idObject, idChild wintypes.LONG, idEventThread, dwmsEventTime wintypes.DWORD) uintptr {
-	fmt.Printf("Got event!!!!!\n")
-	return 0
-}
-
-func GetEvents() {
-	fmt.Println("GetEvents")
-	hook := winapi.Hooker(handler)
-	fmt.Printf("hook: %v\n", hook)
-	select {}
-}
-
 func main() {
 	ListenIndefinitely()
 }

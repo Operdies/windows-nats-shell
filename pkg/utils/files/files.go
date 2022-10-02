@@ -119,9 +119,9 @@ func calcExtHasAssoc(ext string) bool {
 	resultPtr := unsafe.Pointer(&res[0])
 	hResult := winapi.AssocQueryString(wintypes.ASSOCF_NONE, wintypes.ASSOCSTR_FRIENDLYDOCNAME, wintypes.LPCSTR(ptr), 0, wintypes.LPSTR(resultPtr), uintptr(sizePtr))
 	v := wintypes.SUCCEEDED(hResult)
-	resStr := res[:size]
+	// resStr := res[:size]
 	if v {
-		fmt.Printf("Extension %s supported: %v (%v) (%v)\n", ext, v, string(resStr), hResult)
+		// fmt.Printf("Extension %s supported: %v (%v) (%v)\n", ext, v, string(resStr), hResult)
 	}
 	return v
 }
