@@ -70,6 +70,15 @@ func getConfigPaths() []string {
 	return result
 }
 
+func truther() *bool {
+	b := true
+	return &b
+}
+func falser() *bool {
+	b := false
+	return &b
+}
+
 func start(config *shell.Configuration) bool {
 	fmt.Println("Starting shell!")
 
@@ -93,6 +102,12 @@ func start(config *shell.Configuration) bool {
 		jobs = map[string]*service.ProcessJob{}
 
 		for name, ser := range config.Services {
+			if ser.AutoRestart == nil {
+				ser.AutoRestart = falser()
+			}
+			if ser.Enabled == nil {
+				ser.Enabled = truther()
+			}
 			jobs[name] = service.NewProcessJob(name, ser)
 		}
 

@@ -2,6 +2,7 @@ services:
   # The shell-app-runtime is a dependency of shell-event-publisher.
   # without it, shell events are only published when windows switch focus,
   # and the events don't contain as much information
+  # This also enables the Windows menu, even when the SHELLPROC intercepts it.. investigate
   shell-app-runtime: 
     executable: C:\Windows\System32\ShellAppRuntime.exe
     autorestart: false

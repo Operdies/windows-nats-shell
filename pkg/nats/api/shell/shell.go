@@ -23,8 +23,8 @@ const (
 	RemoveService = "Shell.RemoveService"
 	// Quit the shell
 	QuitShell = "Shell.Quit"
-  // Some shell event happened 
-  ShellEvent = "Shell.Event"
+	// Some shell event happened
+	ShellEvent = "Shell.Event"
 )
 
 type Service struct {
@@ -34,6 +34,7 @@ type Service struct {
 	Arguments  []string
 	// Defaults to cwd
 	WorkingDirectory string
+	Enabled          *bool
 	AutoRestart      *bool
 	ForwardStdout    bool
 	ForwardStderror  bool
@@ -47,5 +48,47 @@ type Configuration struct {
 }
 
 type Event struct {
-  Event string
+	Event  string
+	NCode  int
+	WParam uint64
+	LParam uint64
+}
+
+// hshell codes
+const (
+	HSHELL_ACCESSIBILITYSTATE  = 11
+	HSHELL_ACTIVATESHELLWINDOW = 3
+	HSHELL_APPCOMMAND          = 12
+	HSHELL_GETMINRECT          = 5
+	HSHELL_LANGUAGE            = 8
+	HSHELL_REDRAW              = 6
+	HSHELL_TASKMAN             = 7
+	HSHELL_WINDOWACTIVATED     = 4
+	HSHELL_WINDOWCREATED       = 1
+	HSHELL_WINDOWDESTROYED     = 2
+	HSHELL_WINDOWREPLACED      = 13
+)
+
+func NewEvent(nCode int, wParam uintptr, lParam uintptr) Event {
+	var mapping = map[int]string{
+		HSHELL_ACCESSIBILITYSTATE:  "HSHELL_ACCESSIBILITYSTATE",
+		HSHELL_ACTIVATESHELLWINDOW: "HSHELL_ACTIVATESHELLWINDOW",
+		HSHELL_APPCOMMAND:          "HSHELL_APPCOMMAND",
+		HSHELL_GETMINRECT:          "HSHELL_GETMINRECT",
+		HSHELL_LANGUAGE:            "HSHELL_LANGUAGE",
+		HSHELL_REDRAW:              "HSHELL_REDRAW",
+		HSHELL_TASKMAN:             "HSHELL_TASKMAN",
+		HSHELL_WINDOWACTIVATED:     "HSHELL_WINDOWACTIVATED",
+		HSHELL_WINDOWCREATED:       "HSHELL_WINDOWCREATED",
+		HSHELL_WINDOWDESTROYED:     "HSHELL_WINDOWDESTROYED",
+		HSHELL_WINDOWREPLACED:      "HSHELL_WINDOWREPLACED",
+	}
+
+	evt, ok := mapping[nCode]
+	if !ok {
+		evt = "UNKOWN_EVENT"
+	}
+
+	var e = Event{Event: evt, NCode: nCode, WParam: uint64(wParam), LParam: uint64(lParam)}
+	return e
 }

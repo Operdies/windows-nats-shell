@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/operdies/windows-nats-shell/cmd/shell-event-publisher/hooks"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
-	"github.com/operdies/windows-nats-shell/cmd/shell-event-publisher/hooks"
 	"gopkg.in/natefinch/npipe.v2"
 )
 
@@ -25,7 +27,12 @@ func handleConn(conn net.Conn) {
 	defer conn.Close()
 	s := bufio.NewScanner(conn)
 	for s.Scan() {
-		cl.Publish.ShellEvent(shell.Event{Event: s.Text()})
+    parts := strings.Split(s.Text(), ",")
+    numbers := make([]uint64, 3)
+    for i := 0; i < 3; i++ {
+      numbers[i], _ = strconv.ParseUint(parts[i], 10, 64)
+    }
+		cl.Publish.ShellEvent(shell.NewEvent(int(numbers[0]), uintptr(numbers[1]), uintptr(numbers[2])))
 	}
 }
 

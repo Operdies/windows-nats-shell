@@ -16,38 +16,12 @@ import (
 
 	"github.com/nats-io/nats.go"
 
+	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/nats/utils"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
-
-func poll(s client.Client, interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	prevWindows := make([]wintypes.Window, 0)
-
-	anyChanged := func(windows []wintypes.Window) bool {
-		if len(prevWindows) != len(windows) {
-			return true
-		}
-		for i := 0; i < len(prevWindows); i = i + 1 {
-			w1 := prevWindows[i]
-			w2 := windows[i]
-
-			if w1.Handle != w2.Handle {
-				return true
-			}
-		}
-		return false
-	}
-	for range ticker.C {
-		windows := winapi.GetVisibleWindows()
-		if anyChanged(windows) {
-			s.Publish.WindowsUpdated(windows)
-		}
-		prevWindows = windows
-	}
-}
 
 func superFocusStealer(handle wintypes.HWND) wintypes.BOOL {
 	// We should probably reset this...
@@ -86,7 +60,16 @@ func getKeys[T1 comparable, T2 any](source map[T1]T2) []T1 {
 func ListenIndefinitely() {
 	client, _ := client.New(nats.DefaultURL, time.Second)
 	defer client.Close()
-	go poll(client, time.Millisecond*1000)
+
+	client.Subscribe.ShellEvent(func(e shell.Event) {
+		if e.NCode == shell.HSHELL_ACTIVATESHELLWINDOW ||
+			e.NCode == shell.HSHELL_WINDOWDESTROYED ||
+			e.NCode == shell.HSHELL_WINDOWREPLACED ||
+			e.NCode == shell.HSHELL_WINDOWACTIVATED ||
+			e.NCode == shell.HSHELL_WINDOWCREATED {
+			client.Publish.WindowsUpdated(winapi.GetVisibleWindows())
+		}
+	})
 	client.Subscribe.GetWindows(winapi.GetVisibleWindows)
 
 	client.Subscribe.IsWindowFocused(func(h wintypes.HWND) bool {
@@ -130,11 +113,11 @@ func ListenIndefinitely() {
 func startDetachedProcess(proc string) error {
 	const sw_shownormal = 1
 
-  // b := make([]byte, 0)
-  empty := 0
-  procb := []byte(proc)
-  procp := unsafe.Pointer(&procb[0])
-  _, err := winapi.ShellExecute(0, wintypes.LPCSTR(empty), wintypes.LPCSTR(procp), wintypes.LPCSTR(empty), wintypes.LPCSTR(empty), sw_shownormal)
+	// b := make([]byte, 0)
+	empty := 0
+	procb := []byte(proc)
+	procp := unsafe.Pointer(&procb[0])
+	_, err := winapi.ShellExecute(0, wintypes.LPCSTR(empty), wintypes.LPCSTR(procp), wintypes.LPCSTR(empty), wintypes.LPCSTR(empty), sw_shownormal)
 	// shellExecute(0, "", proc, "", "", sw_shownormal)
 	return err
 }

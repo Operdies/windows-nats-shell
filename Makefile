@@ -1,10 +1,10 @@
 BINPATH=./bin
-all: shell-event-publisher windows-nats-driver windows-shell
+all: shell-event-publisher windows-nats-driver windows-shell hookdll
 
 hookdll: 
 	g++ -shared  -I./c/hook-dll  -fpic ./c/hook-dll/hook.cpp -o $(BINPATH)/libhook.dll
 
-shell-event-publisher: hookdll
+shell-event-publisher: 
 	go build -o $(BINPATH)/shell-event-publisher.exe ./cmd/shell-event-publisher/
 
 windows-nats-driver: 
