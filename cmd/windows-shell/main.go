@@ -86,12 +86,52 @@ func falser() *bool {
 }
 
 func start(config *shell.Configuration) bool {
+	quit := make(chan bool)
+	var jobs map[string]*service.ProcessJob
 	fmt.Println("Starting shell!")
-
 	home, _ := os.UserHomeDir()
 	os.Chdir(home)
 
-	var jobs map[string]*service.ProcessJob
+	client, _ := client.New(nats.DefaultURL, time.Second)
+	defer client.Close()
+	client.Subscribe.StartService(func(s string) error {
+		job, ok := jobs[s]
+		if ok {
+			return job.Start()
+		}
+		return fmt.Errorf("Service '%s' is not configured.", s)
+	})
+	client.Subscribe.StopService(func(s string) error {
+		job, ok := jobs[s]
+		if ok {
+			return job.Stop()
+		}
+		return fmt.Errorf("Service '%s' is not configured.", s)
+	})
+	client.Subscribe.RestartService(func(s string) error {
+		job, ok := jobs[s]
+		if ok {
+			return job.Restart()
+		}
+		return fmt.Errorf("Service '%s' is not configured.", s)
+	})
+	client.Subscribe.RestartShell(func() error {
+		quit <- true
+		return nil
+	})
+	client.Subscribe.QuitShell(func() error {
+		quit <- false
+		return nil
+	})
+	client.Subscribe.Config(func(key string) *shell.Service {
+		if section, ok := config.Services[key]; ok {
+			return &section
+		}
+		return nil
+	})
+	client.Subscribe.ShellConfig(func() shell.Configuration {
+		return *config
+	})
 
 	stopJobs := func() {
 		if jobs != nil {
@@ -127,50 +167,6 @@ func start(config *shell.Configuration) bool {
 	if err != nil {
 		panic(err.Error())
 	}
-
-	client, _ := client.New(nats.DefaultURL, time.Second)
-	defer client.Close()
-	client.Subscribe.StartService(func(s string) error {
-		job, ok := jobs[s]
-		if ok {
-			return job.Start()
-		}
-		return fmt.Errorf("Service '%s' is not configured.", s)
-	})
-	client.Subscribe.StopService(func(s string) error {
-		job, ok := jobs[s]
-		if ok {
-			return job.Stop()
-		}
-		return fmt.Errorf("Service '%s' is not configured.", s)
-	})
-	client.Subscribe.RestartService(func(s string) error {
-		job, ok := jobs[s]
-		if ok {
-			return job.Restart()
-		}
-		return fmt.Errorf("Service '%s' is not configured.", s)
-	})
-
-	quit := make(chan bool)
-	client.Subscribe.RestartShell(func() error {
-		quit <- true
-		return nil
-	})
-	client.Subscribe.QuitShell(func() error {
-		quit <- false
-		return nil
-	})
-
-	client.Subscribe.Config(func(key string) *shell.Service {
-		if section, ok := config.Services[key]; ok {
-			return &section
-		}
-		return nil
-	})
-	client.Subscribe.ShellConfig(func() shell.Configuration {
-		return *config
-	})
 
 	return <-quit
 }

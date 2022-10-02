@@ -1,6 +1,7 @@
 package files
 
 import (
+	"fmt"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -121,10 +122,23 @@ func getKey(fullname string) string {
 func Create(root string, recursive, watch bool) *WatchedDir {
 	var w = WatchedDir{root: root, recursive: recursive}
 	watcher, _ := fsnotify.NewWatcher()
-	if recursive {
-	} else {
-		watcher.Add(root)
+
+	if watch {
+		if recursive {
+			filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+				if d.IsDir() {
+					err := watcher.Add(path)
+					if err != nil {
+						fmt.Printf("Error adding watch: %v", err.Error())
+					}
+				}
+				return nil
+			})
+		} else {
+			watcher.Add(root)
+		}
 	}
+
 	w.watcher = watcher
 	w.indexFiles()
 	if watch {

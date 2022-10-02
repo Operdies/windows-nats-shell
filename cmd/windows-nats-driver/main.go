@@ -46,7 +46,10 @@ func ListenIndefinitely() {
 	client, _ := client.New(nats.DefaultURL, time.Second)
 	defer client.Close()
 
-	cfg := client.Request.Config("")
+	cfg, err := client.Request.Config("")
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println(cfg)
 	custom, _ := shell.GetCustom[customOptions](cfg)
 	indexItems(custom)

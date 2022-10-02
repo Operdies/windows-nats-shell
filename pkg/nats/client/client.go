@@ -2,6 +2,7 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -205,12 +206,20 @@ func (client Subscriber) Config(callback func(string) *shell.Service) {
 // If the empty string is specified, this function attempts to
 // find the currently executing service based on the environment
 // variable
-func (client Requester) Config(name string) shell.Service {
+func (client Requester) Config(name string) (service shell.Service, err error) {
 	if name == "" {
 		name = os.Getenv(shell.SERVICE_ENV_KEY)
 	}
-	msg, _ := client.nc.Request(shell.GetService, []byte(name), client.timeout)
-	return utils.DecodeAny[shell.Service](msg.Data)
+	if name == "" {
+		fmt.Println("No such config: ", name)
+		return
+	}
+	msg, err := client.nc.Request(shell.GetService, []byte(name), client.timeout)
+	if err != nil {
+		return
+	}
+	service = utils.DecodeAny[shell.Service](msg.Data)
+	return
 }
 
 func (client Subscriber) ShellConfig(callback func() shell.Configuration) {

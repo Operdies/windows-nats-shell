@@ -1,5 +1,5 @@
 BINPATH=./bin
-all: shell-event-publisher windows-nats-driver windows-shell hookdll
+all: shell-event-publisher windows-nats-driver windows-shell
 
 hookdll: 
 	g++ -shared  -I./c/hook-dll  -fpic ./c/hook-dll/hook.cpp -o $(BINPATH)/libhook.dll

@@ -14,6 +14,7 @@ services:
     custom:
       launcher:
         includesystempath: true
+        watchsystempath: true
         sources:
           - path: C:/Users/alexw/Desktop
             recursive: true 
