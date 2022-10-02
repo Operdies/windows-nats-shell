@@ -8,14 +8,14 @@ LRESULT CALLBACK ShellProc(int nCode, WPARAM wParam, LPARAM lParam) {
   UNUSED(wParam);
   UNUSED(lParam);
 
-  if (nCode >= 0){
+  // if (nCode >= 0){
     char buf[32];
     sprintf(buf, "%d,%llu,%lld", nCode, wParam, lParam);
     WriteToPipeWithRetry(buf, 3);
 
     // Block opening the start menu when pressing the windows key
     if (nCode == 7) return TRUE;
-  }
+  // }
   return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 

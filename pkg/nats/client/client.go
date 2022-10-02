@@ -2,13 +2,14 @@ package client
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/system"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
-	"github.com/operdies/windows-nats-shell/pkg/nats/utils"
+	"github.com/operdies/windows-nats-shell/pkg/utils"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
@@ -200,7 +201,14 @@ func (client Subscriber) Config(callback func(string) *shell.Service) {
 	})
 }
 
+// Get the request for the named service. 
+// If the empty string is specified, this function attempts to 
+// find the currently executing service based on the environment 
+// variable
 func (client Requester) Config(name string) shell.Service {
+	if name == "" {
+		name = os.Getenv(shell.SERVICE_ENV_KEY)
+	}
 	msg, _ := client.nc.Request(shell.GetService, []byte(name), client.timeout)
 	return utils.DecodeAny[shell.Service](msg.Data)
 }

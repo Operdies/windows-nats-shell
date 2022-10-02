@@ -69,7 +69,7 @@ func (j *ProcessJob) Start() error {
 	j.restart = *j.service.AutoRestart == true
 	prog := j.service
 	cmd := exec.Command(prog.Executable, prog.Arguments...)
-	ref := fmt.Sprintf("MINIMAL_SHELL_SERVICE_NAME=%s", j.name)
+	ref := fmt.Sprintf("%s=%s", shell.SERVICE_ENV_KEY, j.name)
 	env := os.Environ()
 	env = append(env, prog.Environment...)
 	env = append(env, ref)

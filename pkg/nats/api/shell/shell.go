@@ -1,5 +1,7 @@
 package shell
 
+import "gopkg.in/yaml.v3"
+
 const (
 	// Restart a service by name
 	RestartService = "Shell.RestartService"
@@ -27,8 +29,12 @@ const (
 	ShellEvent = "Shell.Event"
 )
 
+const (
+	SERVICE_ENV_KEY = "_SHELL_SERVICE_NAME_"
+)
+
 type Service struct {
-	Custom map[string]string
+	Custom map[string]interface{}
 	// The full path to the exectuable file
 	Executable string
 	Arguments  []string
@@ -41,6 +47,16 @@ type Service struct {
 	ForwardStdin     bool
 	// Any environment variables that should be defined
 	Environment []string
+}
+
+func GetCustom[T any](s Service) (result T, err error) {
+	custom := s.Custom
+	buffer, err := yaml.Marshal(custom)
+  if err != nil {
+    return
+  }
+	err = yaml.Unmarshal(buffer, &result)
+	return
 }
 
 type Configuration struct {

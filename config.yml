@@ -11,6 +11,22 @@ services:
     executable: ./bin/shell-event-publisher.exe
     workingdirectory: C:/Users/alexw/repos/minimalist-shell
   windows-nats-driver:
+    custom:
+      launcher:
+        includesystempath: true
+        sources:
+          - path: C:/Users/alexw/Desktop
+            recursive: true 
+            watch: true
+          - path: C:/Users/alexw/scripts
+            recursive: true 
+            watch: true
+          - path: "C:/Users/alexw/AppData/Roaming/Microsoft/Windows/Start Menu/"
+            recursive: true 
+            watch: true
+          - path: "C:/ProgramData/Microsoft/Windows/Start Menu/"
+            recursive: true 
+            watch: true
     executable: ./bin/windows-nats-driver.exe
     workingdirectory: C:/Users/alexw/repos/minimalist-shell
     autorestart: true

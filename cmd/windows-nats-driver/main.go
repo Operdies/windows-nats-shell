@@ -4,13 +4,8 @@ package main
 
 import (
 	"fmt"
-	"io/fs"
-	"io/ioutil"
 	"os"
-	"path"
-	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 	"unsafe"
 
@@ -18,10 +13,26 @@ import (
 
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
-	"github.com/operdies/windows-nats-shell/pkg/nats/utils"
+	"github.com/operdies/windows-nats-shell/pkg/utils/files"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
+
+type executableSource struct {
+	Path      string
+	Recursive bool
+	Watch     bool
+}
+
+type launcherOptions struct {
+	IncludeSystemPath bool
+	WatchSystemPath   bool
+	Sources           []executableSource
+}
+
+type customOptions struct {
+	Launcher launcherOptions
+}
 
 func superFocusStealer(handle wintypes.HWND) wintypes.BOOL {
 	// We should probably reset this...
@@ -31,35 +42,14 @@ func superFocusStealer(handle wintypes.HWND) wintypes.BOOL {
 	return success
 }
 
-func init() {
-	go indexItems()
-}
-
-func getValues[T1 comparable, T2 any](source map[T1]T2) []T2 {
-	result := make([]T2, len(source))
-	k := 0
-	for _, v := range source {
-		result[k] = v
-		k = k + 1
-	}
-
-	return result
-}
-
-func getKeys[T1 comparable, T2 any](source map[T1]T2) []T1 {
-	result := make([]T1, len(source))
-	k := 0
-	for v := range source {
-		result[k] = v
-		k = k + 1
-	}
-
-	return result
-}
-
 func ListenIndefinitely() {
 	client, _ := client.New(nats.DefaultURL, time.Second)
 	defer client.Close()
+
+	cfg := client.Request.Config("")
+	fmt.Println(cfg)
+	custom, _ := shell.GetCustom[customOptions](cfg)
+	indexItems(custom)
 
 	client.Subscribe.ShellEvent(func(e shell.Event) {
 		if e.NCode == shell.HSHELL_ACTIVATESHELLWINDOW ||
@@ -83,24 +73,21 @@ func ListenIndefinitely() {
 
 	client.Subscribe.GetPrograms(func() []string {
 		// Ensure the files are properly indexed before proceeding
-		indexItems()
-		return getKeys(menuItems)
+		return getFriendlyNames()
 	})
 
 	client.Subscribe.LaunchProgram(func(requested string) string {
-		indexItems()
 		if requested == "" {
 			return "No program specified"
 		}
 		fmt.Println("Got command to start", requested)
-		var err error
-		val, ok := menuItems[requested]
+		val, err := getPathExecutable(requested)
 
-		if ok {
-			err = startDetachedProcess(val)
-		} else {
-			err = startDetachedProcess(requested)
+		if err != nil {
+			return err.Error()
 		}
+
+		err = startDetachedProcess(val)
 
 		if err != nil {
 			return err.Error()
@@ -122,55 +109,6 @@ func startDetachedProcess(proc string) error {
 	return err
 }
 
-func getPathItems() map[string]string {
-	path, exists := os.LookupEnv("PATH")
-	pathMap := map[string]string{}
-	if exists {
-		home, _ := os.LookupEnv("USERPROFILE")
-		desktop := filepath.Join(home, "Desktop")
-		for _, dir := range strings.Split(path+";"+desktop, ";") {
-			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				// path/to/whatever does not exist
-				continue
-			}
-			entries, _ := ioutil.ReadDir(dir)
-			for _, path := range entries {
-				nm := path.Name()
-				ext := filepath.Ext(nm)
-				if ext == ".exe" || ext == ".lnk" {
-					pathMap[baseNameNoExt(nm)] = filepath.Join(dir, nm)
-				}
-			}
-		}
-	}
-
-	return pathMap
-}
-
-func baseNameNoExt(fullname string) string {
-	bn := filepath.Base(fullname)
-	idx := strings.LastIndex(bn, ".")
-	if idx > 0 && false {
-		return bn[:idx]
-	}
-	return bn
-}
-
-func getApplications(startMenu string) map[string]string {
-	allowedExtensions := []string{".exe", ".lnk", ".url"}
-	items := map[string]string{}
-
-	filepath.WalkDir(startMenu, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() == false && utils.Contains(allowedExtensions, strings.ToLower(filepath.Ext(d.Name()))) {
-			nm := d.Name()
-			items[baseNameNoExt(nm)] = path
-		}
-		return nil
-	})
-	return items
-
-}
-
 func mergeMaps(maps ...map[string]string) map[string]string {
 	result := map[string]string{}
 	for _, m := range maps {
@@ -181,30 +119,49 @@ func mergeMaps(maps ...map[string]string) map[string]string {
 	return result
 }
 
-func getStartMenuItems() []map[string]string {
-	envKeys := []string{"APPDATA", "PROGRAMDATA"}
-	result := make([]map[string]string, len(envKeys))
-	// C:\Users\alexw\AppData\Roaming\Microsoft\Windows\Start Menu
-	for i, k := range envKeys {
-		dir := os.Getenv(k)
-		startMenu := path.Join(dir, "Microsoft", "Windows", "Start Menu")
-		result[i] = getApplications(startMenu)
+func getFriendlyNames() []string {
+	result := make([]string, 0, 100)
+	for _, w := range watchers {
+		for friendly := range w.Files() {
+			result = append(result, friendly)
+		}
 	}
 	return result
 }
 
-var menuItems map[string]string
-var indexMut sync.Mutex
-
-func indexItems() {
-	if menuItems != nil {
-		return
+func getPathExecutable(s string) (prog string, err error) {
+	for _, w := range watchers {
+		if p, ok := w.Files()[s]; ok {
+			prog = p
+			return
+		}
 	}
-	indexMut.Lock()
-	defer indexMut.Unlock()
-	if menuItems == nil {
-		executables := getPathItems()
-		menuItems = mergeMaps(append(getStartMenuItems(), executables)...)
+	err = fmt.Errorf("File %s not found.", s)
+	return
+}
+
+var (
+	// menuItems map[string]string
+	// indexMut  sync.Mutex
+	watchers = make([]*files.WatchedDir, 0, 20)
+)
+
+func indexItems(custom customOptions) {
+	for _, source := range custom.Launcher.Sources {
+		watchers = append(watchers, files.Create(source.Path, source.Recursive, source.Watch))
+	}
+
+	if custom.Launcher.IncludeSystemPath {
+		path, exists := os.LookupEnv("PATH")
+		if exists {
+			for _, dir := range strings.Split(path, ";") {
+				if _, err := os.Stat(dir); os.IsNotExist(err) {
+					// path/to/whatever does not exist
+					continue
+				}
+				watchers = append(watchers, files.Create(dir, false, custom.Launcher.WatchSystemPath))
+			}
+		}
 	}
 }
 

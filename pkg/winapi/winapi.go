@@ -40,13 +40,21 @@ var (
 
 	shell32       = syscall.MustLoadDLL("shell32.dll")
 	shellExecuteW = shell32.MustFindProc("ShellExecuteA")
+
+	Shlwapi          = syscall.MustLoadDLL("Shlwapi.dll")
+	assocQueryString = Shlwapi.MustFindProc("AssocQueryStringA")
 )
+
+func AssocQueryString(flags wintypes.AssocF, str wintypes.AssocStr, pszAssoc, pszExtra wintypes.LPCSTR, pszOut wintypes.LPSTR, pcchOut uintptr) wintypes.LWSTDAPI {
+	r, _, _ := assocQueryString.Call(uintptr(flags), uintptr(str), uintptr(pszAssoc), uintptr(pszExtra), uintptr(pszOut), pcchOut)
+	return wintypes.LWSTDAPI(r)
+}
 
 func ShellExecute(hwnd wintypes.HWND, lpOperation, lpFile, lpParameters, lpDirectory wintypes.LPCSTR, nShowCmd int) (wintypes.HINSTANCE, error) {
 	r, _, err := shellExecuteW.Call(uintptr(hwnd), uintptr(lpOperation), uintptr(lpFile), uintptr(lpParameters), uintptr(lpDirectory), uintptr(nShowCmd))
-  if r >= 32 {
-    err = nil
-  }
+	if r >= 32 {
+		err = nil
+	}
 	return wintypes.HINSTANCE(r), err
 }
 

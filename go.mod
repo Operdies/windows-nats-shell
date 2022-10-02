@@ -8,7 +8,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+require golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
+
 require (
+	github.com/fsnotify/fsnotify v1.5.4
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/nats-io/nats-server/v2 v2.9.1 // indirect
 	github.com/nats-io/nkeys v0.3.0 // indirect

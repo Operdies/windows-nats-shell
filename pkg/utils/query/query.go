@@ -1,8 +1,4 @@
-package utils
-
-import (
-	"gopkg.in/yaml.v3"
-)
+package query
 
 func Contains[T comparable](haystack []T, needle T) bool {
 	for _, item := range haystack {
@@ -34,13 +30,3 @@ func Filter[T1 any](source []T1, filter func(T1) bool) []T1 {
 	return result[:k]
 }
 
-func EncodeAny[T any](value T) []byte {
-	result, _ := yaml.Marshal(value)
-	return result
-}
-
-func DecodeAny[T any](buffer []byte) T {
-	var result T
-	yaml.Unmarshal(buffer, &result)
-	return result
-}
