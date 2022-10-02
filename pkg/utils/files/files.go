@@ -104,19 +104,26 @@ func includeFile(name string) bool {
 	}
 	// check if the extension is supported
 	if !ok {
-		bytes := []byte(ext)
-		ptr := unsafe.Pointer(&bytes[0])
-		var size wintypes.DWORD = 200
-		sizePtr := unsafe.Pointer(&size)
-		res := make([]byte, size)
-		resultPtr := unsafe.Pointer(&res[0])
-		hResult := winapi.AssocQueryString(wintypes.ASSOCF_NONE, wintypes.ASSOCSTR_FRIENDLYDOCNAME, wintypes.LPCSTR(ptr), 0, wintypes.LPSTR(resultPtr), uintptr(sizePtr))
-		v = wintypes.SUCCEEDED(hResult)
-		// resStr := res[:size]
-		// fmt.Printf("Extension %s supported: %v (%v) (%v)\n", ext, v, string(resStr), hResult)
+		v = calcExtHasAssoc(ext)
 		registryFilter.Store(ext, v)
 	}
-	return ok && v
+	return v
+}
+
+func calcExtHasAssoc(ext string) bool {
+	bytes := []byte(ext)
+	ptr := unsafe.Pointer(&bytes[0])
+	var size wintypes.DWORD = 200
+	sizePtr := unsafe.Pointer(&size)
+	res := make([]byte, size)
+	resultPtr := unsafe.Pointer(&res[0])
+	hResult := winapi.AssocQueryString(wintypes.ASSOCF_NONE, wintypes.ASSOCSTR_FRIENDLYDOCNAME, wintypes.LPCSTR(ptr), 0, wintypes.LPSTR(resultPtr), uintptr(sizePtr))
+	v := wintypes.SUCCEEDED(hResult)
+	resStr := res[:size]
+	if v {
+		fmt.Printf("Extension %s supported: %v (%v) (%v)\n", ext, v, string(resStr), hResult)
+	}
+	return v
 }
 
 func pathEqual(s1, s2 string) bool {
