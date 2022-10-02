@@ -8,7 +8,14 @@ services:
     autorestart: false
   # This one creates a bottom-most drawing context and renders 
   # an image. It would be cool if it had some custom shader support
-  shell-background:
+  # shell-background:
+  #   executable: go
+  #   autorestart: false 
+  #   visible: true
+  #   arguments:
+  #     - run 
+  #     - ./cmd/background/
+  #   workingdirectory: C:/Users/alexw/repos/minimalist-shell
   shell-event-publisher:
     autorestart: false
     executable: ./bin/shell-event-publisher.exe

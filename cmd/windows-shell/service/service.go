@@ -98,8 +98,10 @@ func (j *ProcessJob) Start() error {
 		cmd.Stderr = fStderr
 	}
 
-	cmd.SysProcAttr = &syscall.SysProcAttr{}
-	cmd.SysProcAttr.HideWindow = true
+	if j.service.Visible == false {
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
+		cmd.SysProcAttr.HideWindow = true
+	}
 
 	err := cmd.Start()
 

@@ -42,6 +42,7 @@ type Service struct {
 	WorkingDirectory string
 	Enabled          *bool
 	AutoRestart      *bool
+	Visible          bool
 	ForwardStdout    bool
 	ForwardStderror  bool
 	ForwardStdin     bool

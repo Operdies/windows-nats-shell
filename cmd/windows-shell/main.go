@@ -86,9 +86,9 @@ func start(config *shell.Configuration) bool {
 	fmt.Println("Starting shell!")
 
 	client, err := client.New(nats.DefaultURL, time.Second)
-  if err != nil {
-    panic(err)
-  }
+	if err != nil {
+		panic(err)
+	}
 
 	defer func() {
 		for _, s := range subs {
