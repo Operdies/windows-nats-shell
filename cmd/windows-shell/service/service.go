@@ -54,6 +54,12 @@ func CombineErrors(errors ...error) error {
 	return err
 }
 
+var (
+	fStdout = os.NewFile(uintptr(syscall.Stdout), "/dev/stdout")
+	fStdin  = os.NewFile(uintptr(syscall.Stdin), "/dev/stdin")
+	fStderr = os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
+)
+
 func (j *ProcessJob) Start() error {
 	if j.service.Executable == "" {
 		return fmt.Errorf("Service %s has no configured executable.", j.name)
@@ -79,17 +85,17 @@ func (j *ProcessJob) Start() error {
 	if prog.ForwardStdout {
 		cmd.Stdout = os.Stdout
 	} else {
-		cmd.Stdout = os.NewFile(uintptr(syscall.Stdout), "/dev/stdout")
+		cmd.Stdout = fStdout
 	}
 	if prog.ForwardStdin {
 		cmd.Stdin = os.Stdin
 	} else {
-		cmd.Stdin = os.NewFile(uintptr(syscall.Stdin), "/dev/stdin")
+		cmd.Stdin = fStdin
 	}
 	if prog.ForwardStderror {
 		cmd.Stderr = os.Stderr
 	} else {
-		cmd.Stderr = os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
+		cmd.Stderr = fStderr
 	}
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{}

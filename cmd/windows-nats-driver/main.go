@@ -50,7 +50,6 @@ func ListenIndefinitely() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(cfg)
 	custom, _ := shell.GetCustom[customOptions](cfg)
 	indexItems(custom)
 

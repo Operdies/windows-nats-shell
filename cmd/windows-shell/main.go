@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"strings"
@@ -81,50 +80,66 @@ func falser() *bool {
 }
 
 func start(config *shell.Configuration) bool {
-	quit := make(chan bool)
+	var subs []*nats.Subscription
 	var jobs map[string]*service.ProcessJob
+	quit := make(chan bool)
 	fmt.Println("Starting shell!")
-	home, _ := os.UserHomeDir()
-	os.Chdir(home)
 
-	client, _ := client.New(nats.DefaultURL, time.Second)
-	defer client.Close()
-	client.Subscribe.StartService(func(s string) error {
+	client, err := client.New(nats.DefaultURL, time.Second)
+  if err != nil {
+    panic(err)
+  }
+
+	defer func() {
+		for _, s := range subs {
+			s.Unsubscribe()
+		}
+		client.Close()
+	}()
+
+	s, _ := client.Subscribe.StartService(func(s string) error {
 		job, ok := jobs[s]
 		if ok {
 			return job.Start()
 		}
 		return fmt.Errorf("Service '%s' is not configured.", s)
 	})
-	client.Subscribe.StopService(func(s string) error {
+	subs = append(subs, s)
+	s, _ = client.Subscribe.StopService(func(s string) error {
 		job, ok := jobs[s]
 		if ok {
 			return job.Stop()
 		}
 		return fmt.Errorf("Service '%s' is not configured.", s)
 	})
-	client.Subscribe.RestartService(func(s string) error {
+	subs = append(subs, s)
+	s, _ = client.Subscribe.RestartService(func(s string) error {
 		job, ok := jobs[s]
 		if ok {
 			return job.Restart()
 		}
 		return fmt.Errorf("Service '%s' is not configured.", s)
 	})
-	client.Subscribe.RestartShell(func() error {
+	subs = append(subs, s)
+	s, _ = client.Subscribe.RestartShell(func() error {
+		fmt.Println("Restart Shell!")
 		quit <- true
 		return nil
 	})
-	client.Subscribe.QuitShell(func() error {
+	subs = append(subs, s)
+	s, _ = client.Subscribe.QuitShell(func() error {
 		quit <- false
 		return nil
 	})
-	client.Subscribe.Config(func(key string) *shell.Service {
+	subs = append(subs, s)
+	s, _ = client.Subscribe.Config(func(key string) *shell.Service {
 		if section, ok := config.Services[key]; ok {
 			return &section
 		}
 		return nil
 	})
-	client.Subscribe.ShellConfig(func() shell.Configuration {
+	subs = append(subs, s)
+	s, _ = client.Subscribe.ShellConfig(func() shell.Configuration {
 		return *config
 	})
 
@@ -158,12 +173,14 @@ func start(config *shell.Configuration) bool {
 		return nil
 	}
 
-	err := reloadConfig()
+	err = reloadConfig()
 	if err != nil {
 		panic(err.Error())
 	}
 
-	return <-quit
+	restart := <-quit
+	close(quit)
+	return restart
 }
 
 func main() {
@@ -177,7 +194,8 @@ func main() {
 		panic(err.Error())
 	}
 
-	go flushStdinPipeIndefinitely()
+	home, _ := os.UserHomeDir()
+	os.Chdir(home)
 
 	for start(config) {
 		config2, err := parseCfg(*configFile)
@@ -187,17 +205,6 @@ func main() {
 		} else {
 			fmt.Println("Loaded new config file.")
 			config = config2
-		}
-	}
-}
-
-func flushStdinPipeIndefinitely() {
-	buf := make([]byte, 1)
-	for {
-		// We need to flush the stdin buffer in order to other processes to be able to read it
-		_, eof := os.Stdin.Read(buf)
-		if eof == io.EOF {
-			return
 		}
 	}
 }

@@ -47,8 +47,8 @@ func (client Requester) Windows() Windows {
 	return utils.DecodeAny[Windows](response.Data)
 }
 
-func (client Subscriber) WindowsUpdated(callback func(Windows)) {
-	client.nc.Subscribe(windows.WindowsUpdated, func(m *nats.Msg) {
+func (client Subscriber) WindowsUpdated(callback func(Windows)) (*nats.Subscription, error) {
+	return client.nc.Subscribe(windows.WindowsUpdated, func(m *nats.Msg) {
 		windows := utils.DecodeAny[Windows](m.Data)
 		callback(windows)
 	})
@@ -89,38 +89,38 @@ func New(url string, timeout time.Duration) (c Client, err error) {
 	return
 }
 
-func (client Subscriber) GetWindows(callback func() Windows) {
-	client.nc.Subscribe(windows.GetWindows, func(m *nats.Msg) {
+func (client Subscriber) GetWindows(callback func() Windows) (*nats.Subscription, error) {
+	return client.nc.Subscribe(windows.GetWindows, func(m *nats.Msg) {
 		windows := callback()
 		m.Respond(utils.EncodeAny(windows))
 	})
 }
 
-func (client Subscriber) IsWindowFocused(callback func(wintypes.HWND) bool) {
-	client.nc.Subscribe(windows.IsWindowFocused, func(m *nats.Msg) {
+func (client Subscriber) IsWindowFocused(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
+	return client.nc.Subscribe(windows.IsWindowFocused, func(m *nats.Msg) {
 		window := utils.DecodeAny[wintypes.HWND](m.Data)
 		result := callback(window)
 		m.Respond(utils.EncodeAny(result))
 	})
 }
 
-func (client Subscriber) SetFocus(callback func(wintypes.HWND) bool) {
-	client.nc.Subscribe(windows.SetFocus, func(m *nats.Msg) {
+func (client Subscriber) SetFocus(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
+	return client.nc.Subscribe(windows.SetFocus, func(m *nats.Msg) {
 		window := utils.DecodeAny[wintypes.HWND](m.Data)
 		result := callback(window)
 		m.Respond(utils.EncodeAny(result))
 	})
 }
 
-func (client Subscriber) GetPrograms(callback func() []string) {
-	client.nc.Subscribe(system.GetPrograms, func(m *nats.Msg) {
+func (client Subscriber) GetPrograms(callback func() []string) (*nats.Subscription, error) {
+	return client.nc.Subscribe(system.GetPrograms, func(m *nats.Msg) {
 		windows := callback()
 		m.Respond(utils.EncodeAny(windows))
 	})
 }
 
-func (client Subscriber) LaunchProgram(callback func(string) string) {
-	client.nc.Subscribe(system.LaunchProgram, func(msg *nats.Msg) {
+func (client Subscriber) LaunchProgram(callback func(string) string) (*nats.Subscription, error) {
+	return client.nc.Subscribe(system.LaunchProgram, func(msg *nats.Msg) {
 		program := utils.DecodeAny[string](msg.Data)
 		response := callback(program)
 		msg.Respond(utils.EncodeAny(response))
@@ -132,8 +132,8 @@ func (client Publisher) WindowsUpdated(w Windows) {
 }
 
 // Shell
-func (client Subscriber) RestartService(callback func(string) error) {
-	client.nc.Subscribe(shell.RestartService, func(msg *nats.Msg) {
+func (client Subscriber) RestartService(callback func(string) error) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.RestartService, func(msg *nats.Msg) {
 		err := callback(utils.DecodeAny[string](msg.Data))
 		msg.Respond(response(err))
 	})
@@ -142,8 +142,8 @@ func (client Publisher) RestartService(service string) {
 	client.nc.Publish(shell.RestartService, utils.EncodeAny(service))
 }
 
-func (client Subscriber) StopService(callback func(string) error) {
-	client.nc.Subscribe(shell.StopService, func(msg *nats.Msg) {
+func (client Subscriber) StopService(callback func(string) error) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.StopService, func(msg *nats.Msg) {
 		err := callback(utils.DecodeAny[string](msg.Data))
 		msg.Respond(response(err))
 	})
@@ -160,8 +160,8 @@ func response(err error) []byte {
 	return []byte(err.Error())
 }
 
-func (client Subscriber) StartService(callback func(string) error) {
-	client.nc.Subscribe(shell.StartService, func(msg *nats.Msg) {
+func (client Subscriber) StartService(callback func(string) error) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.StartService, func(msg *nats.Msg) {
 		err := callback(utils.DecodeAny[string](msg.Data))
 		msg.Respond(response(err))
 	})
@@ -171,8 +171,8 @@ func (client Publisher) StartService(service string) {
 	client.nc.Publish(shell.StartService, utils.EncodeAny(service))
 }
 
-func (client Subscriber) RestartShell(callback func() error) {
-	client.nc.Subscribe(shell.RestartShell, func(msg *nats.Msg) {
+func (client Subscriber) RestartShell(callback func() error) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.RestartShell, func(msg *nats.Msg) {
 		err := callback()
 		msg.Respond(response(err))
 	})
@@ -182,8 +182,8 @@ func (client Publisher) RestartShell() {
 	client.nc.Publish(shell.RestartShell, []byte{})
 }
 
-func (client Subscriber) QuitShell(callback func() error) {
-	client.nc.Subscribe(shell.QuitShell, func(msg *nats.Msg) {
+func (client Subscriber) QuitShell(callback func() error) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.QuitShell, func(msg *nats.Msg) {
 		err := callback()
 		msg.Respond(response(err))
 	})
@@ -194,8 +194,8 @@ func (client Requester) QuitShell() error {
 	return utils.DecodeAny[error](msg.Data)
 }
 
-func (client Subscriber) Config(callback func(string) *shell.Service) {
-	client.nc.Subscribe(shell.GetService, func(msg *nats.Msg) {
+func (client Subscriber) Config(callback func(string) *shell.Service) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.GetService, func(msg *nats.Msg) {
 		key := utils.DecodeAny[string](msg.Data)
 		config := callback(key)
 		msg.Respond(utils.EncodeAny(config))
@@ -222,8 +222,8 @@ func (client Requester) Config(name string) (service shell.Service, err error) {
 	return
 }
 
-func (client Subscriber) ShellConfig(callback func() shell.Configuration) {
-	client.nc.Subscribe(shell.ShellConfig, func(msg *nats.Msg) {
+func (client Subscriber) ShellConfig(callback func() shell.Configuration) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.ShellConfig, func(msg *nats.Msg) {
 		config := callback()
 		msg.Respond(utils.EncodeAny(config))
 	})
@@ -233,8 +233,8 @@ func (client Publisher) ShellEvent(evt shell.Event) {
 	client.nc.Publish(shell.ShellEvent, utils.EncodeAny(evt))
 }
 
-func (client Subscriber) ShellEvent(callback func(shell.Event)) {
-	client.nc.Subscribe(shell.ShellEvent, func(msg *nats.Msg) {
+func (client Subscriber) ShellEvent(callback func(shell.Event)) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.ShellEvent, func(msg *nats.Msg) {
 		evt := utils.DecodeAny[shell.Event](msg.Data)
 		callback(evt)
 	})
