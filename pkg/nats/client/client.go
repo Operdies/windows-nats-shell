@@ -229,13 +229,35 @@ func (client Subscriber) ShellConfig(callback func() shell.Configuration) (*nats
 	})
 }
 
-func (client Publisher) ShellEvent(evt shell.Event) {
+func (client Publisher) WH_SHELL(evt shell.ShellEventInfo) {
 	client.nc.Publish(shell.ShellEvent, utils.EncodeAny(evt))
 }
 
-func (client Subscriber) ShellEvent(callback func(shell.Event)) (*nats.Subscription, error) {
+func (client Subscriber) WH_SHELL(callback func(shell.ShellEventInfo)) (*nats.Subscription, error) {
 	return client.nc.Subscribe(shell.ShellEvent, func(msg *nats.Msg) {
-		evt := utils.DecodeAny[shell.Event](msg.Data)
+		evt := utils.DecodeAny[shell.ShellEventInfo](msg.Data)
+		callback(evt)
+	})
+}
+
+func (client Publisher) WH_CBT(evt shell.CBTEventInfo) {
+	client.nc.Publish(shell.CBTEvent, utils.EncodeAny(evt))
+}
+
+func (client Subscriber) WH_CBT(callback func(shell.CBTEventInfo)) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.CBTEvent, func(msg *nats.Msg) {
+		evt := utils.DecodeAny[shell.CBTEventInfo](msg.Data)
+		callback(evt)
+	})
+}
+
+func (client Publisher) WH_KEYBOARD(evt shell.KeyboardEventInfo) {
+	client.nc.Publish(shell.KeyboardEvent, utils.EncodeAny(evt))
+}
+
+func (client Subscriber) WH_KEYBOARD(callback func(shell.KeyboardEventInfo)) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.KeyboardEvent, func(msg *nats.Msg) {
+		evt := utils.DecodeAny[shell.KeyboardEventInfo](msg.Data)
 		callback(evt)
 	})
 }

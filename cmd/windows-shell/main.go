@@ -168,7 +168,7 @@ func start(config *shell.Configuration) bool {
 		}
 
 		for _, job := range jobs {
-			job.Start()
+			go job.Start()
 		}
 		return nil
 	}

@@ -9,12 +9,9 @@ import (
 	"unsafe"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/operdies/windows-nats-shell/pkg/utils/query"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
-)
-
-var (
-	knownFileExtensions = map[string]bool{}
 )
 
 type WatchedDir struct {
@@ -25,6 +22,10 @@ type WatchedDir struct {
 	indexLock sync.Mutex
 	watcher   *fsnotify.Watcher
 }
+
+var _extensions []string
+
+func SetExtentions(s []string) { _extensions = s }
 
 func (w *WatchedDir) Files() map[string]string {
 	return w.files
@@ -56,26 +57,6 @@ func (w *WatchedDir) WaitForIndex() {
 	defer w.indexLock.Unlock()
 }
 
-var (
-	// This is like 99% of files. Let's just hardcode them
-	hardcodedFilter = map[string]bool{
-		".exe":  true,
-		".lnk":  true,
-		".bat":  true,
-		".ps1":  true,
-		".url":  true,
-		".html": true,
-		".png":  true,
-		".jpg":  true,
-		".gif":  true,
-		// I don't care about these files, get out
-		".bin": false,
-		".mof": false,
-		".rtf": false,
-	}
-	registryFilter = sync.Map{}
-)
-
 func extLower(s string) string {
 	s = filepath.Ext(s)
 	if len(s) > 0 {
@@ -87,27 +68,7 @@ func extLower(s string) string {
 func includeFile(name string) bool {
 	// v, ok := fileExtensionFilter[extLower(f.Name())]
 	ext := extLower(name)
-	if ext == "" || ext == "." {
-		return false
-	}
-	var ok bool
-	var v bool
-	if v, ok := hardcodedFilter[ext]; ok {
-		return v && ok
-	}
-	if ext == ".exe" {
-		return true
-	}
-	_v, ok := registryFilter.Load(ext)
-	if _v != nil {
-		v = _v.(bool)
-	}
-	// check if the extension is supported
-	if !ok {
-		v = calcExtHasAssoc(ext)
-		registryFilter.Store(ext, v)
-	}
-	return v
+	return query.Contains(_extensions, ext)
 }
 
 func calcExtHasAssoc(ext string) bool {

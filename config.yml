@@ -16,6 +16,10 @@ services:
   #     - run 
   #     - ./cmd/background/
   #   workingdirectory: C:/Users/alexw/repos/minimalist-shell
+  background:
+    autorestart: false
+    executable: ./bin/background.exe
+    workingdirectory: C:/Users/alexw/repos/minimalist-shell
   shell-event-publisher:
     autorestart: false
     executable: ./bin/shell-event-publisher.exe
@@ -25,6 +29,7 @@ services:
       launcher:
         includesystempath: true
         watchsystempath: true
+        extensions: [ .exe, .lnk, .bat, .ps1, .url, .png, .jpg, .gif]
         sources:
           - path: C:/Users/alexw/Desktop
             recursive: true 
@@ -52,3 +57,4 @@ services:
     forwardstdout: false
     forwardstderror: false
     forwardstdin: false
+

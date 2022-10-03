@@ -25,6 +25,7 @@ type executableSource struct {
 }
 
 type launcherOptions struct {
+	Extensions        []string
 	IncludeSystemPath bool
 	WatchSystemPath   bool
 	Sources           []executableSource
@@ -51,14 +52,15 @@ func ListenIndefinitely() {
 		panic(err)
 	}
 	custom, _ := shell.GetCustom[customOptions](cfg)
+	files.SetExtentions(custom.Launcher.Extensions)
 	indexItems(custom)
 
-	client.Subscribe.ShellEvent(func(e shell.Event) {
-		if e.NCode == shell.HSHELL_ACTIVATESHELLWINDOW ||
-			e.NCode == shell.HSHELL_WINDOWDESTROYED ||
-			e.NCode == shell.HSHELL_WINDOWREPLACED ||
-			e.NCode == shell.HSHELL_WINDOWACTIVATED ||
-			e.NCode == shell.HSHELL_WINDOWCREATED {
+	client.Subscribe.WH_SHELL(func(e shell.ShellEventInfo) {
+		if e.ShellCode == shell.HSHELL_ACTIVATESHELLWINDOW ||
+			e.ShellCode == shell.HSHELL_WINDOWDESTROYED ||
+			e.ShellCode == shell.HSHELL_WINDOWREPLACED ||
+			e.ShellCode == shell.HSHELL_WINDOWACTIVATED ||
+			e.ShellCode == shell.HSHELL_WINDOWCREATED {
 			client.Publish.WindowsUpdated(winapi.GetVisibleWindows())
 		}
 	})

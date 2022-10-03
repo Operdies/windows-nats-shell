@@ -3,22 +3,6 @@
 #define UNUSED(x) (void)(x)
 const char *SockAddr = "\\\\.\\pipe\\shellpipe";
 
-
-LRESULT CALLBACK ShellProc(int nCode, WPARAM wParam, LPARAM lParam) {
-  UNUSED(wParam);
-  UNUSED(lParam);
-
-  // if (nCode >= 0){
-    char buf[32];
-    sprintf(buf, "%d,%llu,%lld", nCode, wParam, lParam);
-    WriteToPipeWithRetry(buf, 3);
-
-    // Block opening the start menu when pressing the windows key
-    if (nCode == 7) return TRUE;
-  // }
-  return CallNextHookEx(NULL, nCode, wParam, lParam);
-}
-
 int WriteToPipe(const char *msg) {
   HANDLE pipe = NULL;
 
@@ -35,6 +19,7 @@ int WriteToPipe(const char *msg) {
   return len == n;
 }
 
+
 int WriteToPipeWithRetry(const char *msg, int lim) {
   for (int i = 0; i < lim; i++) {
     if (WriteToPipe(msg)) {
@@ -44,3 +29,31 @@ int WriteToPipeWithRetry(const char *msg, int lim) {
   }
   return 0;
 }
+
+LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam){
+  if (nCode >= 0){
+    char buf[40];
+    sprintf(buf, "WH_KEYBOARD,%d,%llu,%lld", nCode, wParam, lParam);
+    WriteToPipeWithRetry(buf, 3);
+  }
+  return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
+LRESULT CALLBACK CBTProc(int nCode, WPARAM wParam, LPARAM lParam) {
+  if (nCode >= 0){
+    char buf[40];
+    sprintf(buf, "WH_CBT,%d,%llu,%lld", nCode, wParam, lParam);
+    WriteToPipeWithRetry(buf, 3);
+  }
+  return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
+LRESULT CALLBACK ShellProc(int nCode, WPARAM wParam, LPARAM lParam) {
+  if (nCode >= 0){
+    char buf[40];
+    sprintf(buf, "WH_SHELL,%d,%llu,%lld", nCode, wParam, lParam);
+    WriteToPipeWithRetry(buf, 3);
+  }
+  return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+

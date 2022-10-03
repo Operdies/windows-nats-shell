@@ -171,6 +171,10 @@ func SetWindowsHookExW(idHook wintypes.WH_EVENTTYPE, lpfn uintptr, hInstance win
 	return wintypes.HHOOK(r0)
 }
 
+func UnhookWindowsHook(hhook wintypes.HHOOK) {
+	unhookWinEvent.Call(uintptr(hhook))
+}
+
 func CallNextHookEx(hhk wintypes.HHOOK, nCode int, wParam wintypes.WPARAM, lParam wintypes.LPARAM) wintypes.LRESULT {
 	ret, _, _ := callNextHookEx.Call(
 		uintptr(hhk),
