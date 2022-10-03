@@ -15,6 +15,7 @@ import (
 	// "github.com/operdies/windows-nats-shell/cmd/shell-event-publisher/hooks"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
+	"github.com/operdies/windows-nats-shell/pkg/utils/query"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 
@@ -44,36 +45,28 @@ func init() {
 	cl, _ = client.New(nats.DefaultURL, time.Second)
 }
 
-// func publishEvent(eventType string, arguments []string) {
-//   numbers := query.Select(arguments, func(n string) uint64 {
-// 		r, _ := strconv.ParseUint(n, 10, 64)
-// 		return r
-// 	})
-// 	if eventType == "WH_SHELL" {
-// 	} else if eventType == "WH_CBT" {
-// 	} else if eventType == "WH_KEYBOARD" {
-// 	}
-//
-// }
+func publishEvent(eventType string, arguments []string) {
+	numbers := query.Select(arguments, func(n string) uint64 {
+		r, _ := strconv.ParseUint(n, 10, 64)
+		return r
+	})
+	nCode, wParam, lParam := numbers[0], numbers[1], numbers[2]
+
+	if eventType == "WH_SHELL" {
+		cl.Publish.WH_SHELL(shell.WhShellEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
+	} else if eventType == "WH_CBT" {
+		cl.Publish.WH_CBT(shell.WhCbtEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
+	} else if eventType == "WH_KEYBOARD" {
+		cl.Publish.WH_KEYBOARD(shell.WhKeyboardEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
+	}
+}
 
 func handleConn(conn net.Conn) {
 	defer conn.Close()
 	s := bufio.NewScanner(conn)
 	for s.Scan() {
 		msg := strings.Split(s.Text(), ",")
-		parts := msg[1:]
-		numbers := make([]uint64, 3)
-		for i := 0; i < 3; i++ {
-			numbers[i], _ = strconv.ParseUint(parts[i], 10, 64)
-		}
-		if msg[0] == "WH_SHELL" {
-			cl.Publish.WH_SHELL(shell.WhShellEvent(int(numbers[0]), uintptr(numbers[1]), uintptr(numbers[2])))
-		} else if msg[0] == "WH_CBT" {
-			cl.Publish.WH_CBT(shell.WhCbtEvent(int(numbers[0]), uintptr(numbers[1]), uintptr(numbers[2])))
-		} else if msg[0] == "WH_KEYBOARD" {
-			cl.Publish.WH_KEYBOARD(shell.WhKeyboardEvent(int(numbers[0]), uintptr(numbers[1]), uintptr(numbers[2])))
-		}
-
+		publishEvent(msg[0], msg[1:])
 	}
 }
 
