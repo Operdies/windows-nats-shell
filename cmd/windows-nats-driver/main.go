@@ -55,12 +55,19 @@ func ListenIndefinitely() {
 	files.SetExtentions(custom.Launcher.Extensions)
 	indexItems(custom)
 
-	client.Subscribe.WH_SHELL(func(e shell.ShellEventInfo) {
-		if e.ShellCode == shell.HSHELL_ACTIVATESHELLWINDOW ||
-			e.ShellCode == shell.HSHELL_WINDOWDESTROYED ||
-			e.ShellCode == shell.HSHELL_WINDOWREPLACED ||
-			e.ShellCode == shell.HSHELL_WINDOWACTIVATED ||
-			e.ShellCode == shell.HSHELL_WINDOWCREATED {
+	client.Subscribe.WH_CBT(func(e shell.CBTEventInfo) {
+		watched := map[shell.WM_CBT_CODE]bool{
+			shell.HCBT_ACTIVATE:   true,
+			shell.HCBT_CREATEWND:  true,
+			shell.HCBT_DESTROYWND: true,
+			shell.HCBT_SETFOCUS:   true,
+		}
+		if v, ok := watched[e.CBTCode]; v && ok {
+			// When CREATEWND and DESTROYWND is received, the window operation
+			// has been posted, but not completed. Wait a bit before publishing
+			if e.CBTCode == shell.HCBT_DESTROYWND || e.CBTCode == shell.HCBT_CREATEWND {
+				time.Sleep(time.Millisecond * 100)
+			}
 			client.Publish.WindowsUpdated(winapi.GetVisibleWindows())
 		}
 	})

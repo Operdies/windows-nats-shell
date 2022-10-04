@@ -78,6 +78,10 @@ func (client Client) Close() {
 	client.nc.Close()
 }
 
+func Default() Client {
+	c, _ := New(nats.DefaultURL, time.Second)
+	return c
+}
 func New(url string, timeout time.Duration) (c Client, err error) {
 	nc, err := nats.Connect(url)
 	if err != nil {
