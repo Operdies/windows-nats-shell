@@ -34,7 +34,8 @@ func main() {
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
 	glfw.WindowHint(glfw.DoubleBuffer, glfw.False)
 
-	window := winhacks.GetCanvas()
+	w2 := winhacks.GetCanvas()
+	window := w2.GlfwWindow
 
 	strToCol := func(s string) [4]float32 {
 		col := func(c string) float32 {
@@ -47,9 +48,9 @@ func main() {
 		b := s[6:]
 		return [4]float32{col(r), col(g), col(b), col(a)}
 	}
-
+	colStr := "00ac21c4"
 	myClear := func(intensity float32) {
-		colors := strToCol("00ac21c4")
+		colors := strToCol(colStr)
 		for i := range colors {
 			colors[i] *= intensity
 		}
@@ -58,12 +59,12 @@ func main() {
 
 	intensity := 0.2
 	myClear(float32(intensity))
-	ticker := time.NewTicker(time.Millisecond * 30)
+	ticker := time.NewTicker(time.Millisecond * 5000)
 
 	step := func() {
 		// window.SwapBuffers()
 		glfw.PollEvents()
-    gl.Finish()
+		gl.Finish()
 	}
 
 	quit := make(chan bool)
@@ -71,10 +72,6 @@ func main() {
 		quit <- true
 	})
 
-	const (
-		s = 83
-		w = 87
-	)
 	clamp := func(v, min, max float64) float64 {
 		if v < min {
 			return min
@@ -87,15 +84,31 @@ func main() {
 	controls := make(chan bool)
 	nc, _ := client.New(nats.DefaultURL, time.Second)
 	nc.Subscribe.WH_KEYBOARD(func(kei shell.KeyboardEventInfo) {
-		if kei.VirtualKeyCode == s && kei.PreviousKeyState == false {
-			intensity -= 0.1
-		} else if kei.VirtualKeyCode == w && kei.PreviousKeyState == false {
-			intensity += 0.1
-		} else {
-			return
+		if kei.PreviousKeyState == false {
+			// appendage := strconv.FormatUint(kei.VirtualKeyCode * 13, 16)[:2]
+			// colStr = colStr + appendage
+			// colStr = colStr[len(colStr) - 8:]
+			var key glfw.Key = glfw.Key(kei.VirtualKeyCode)
+			if key%2 == 1 {
+				intensity += 0.01
+			} else {
+				intensity -= 0.01
+			}
+			intensity = clamp(intensity, 0.3, 1)
 		}
-		intensity = clamp(intensity, 0, 1)
 		controls <- true
+	})
+
+	nc.Subscribe.WH_CBT(func(ci shell.CBTEventInfo) {
+		if ci.CBTCode == shell.HCBT_SETFOCUS {
+			winhacks.SetBottomMost(w2.Hwnd)
+		}
+	})
+
+	winhacks.MakeToolWindow(w2.Hwnd)
+	winhacks.SetBottomMost(w2.Hwnd)
+	window.SetMouseButtonCallback(func(w *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
+		winhacks.SetBottomMost(w2.Hwnd)
 	})
 
 	for {
