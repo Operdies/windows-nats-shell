@@ -1,43 +1,22 @@
 package main
 
 import (
-	"log"
 	"runtime"
 	"strconv"
 	"time"
-	"unsafe"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
-)
-
-import (
-	// #include <Windows.h>
-	// #include <Winuser.h>
-	"C"
+	"github.com/nats-io/nats.go"
+	"github.com/operdies/windows-nats-shell/cmd/background/winhacks"
+	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
+	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 )
 
 func init() {
 	// This is needed to arrange that main() runs on main thread.
 	// See documentation for functions that are only allowed to be called from the main thread.
 	runtime.LockOSThread()
-}
-
-const (
-	GWL_EXSTYLE      = -20
-	WS_EX_NOACTIVATE = 0x8000000
-)
-
-func makeUnfocusable(hwnd2 C.HWND) {
-	style := C.GetWindowLong(hwnd2, GWL_EXSTYLE)
-	style |= C.WS_EX_NOACTIVATE
-	style &= ^C.WS_EX_APPWINDOW
-	style |= C.WS_EX_TOOLWINDOW
-	C.SetWindowLong(hwnd2, GWL_EXSTYLE, style)
-}
-
-func setBottomMost(hwnd2 C.HWND) {
-	C.SetWindowPos(hwnd2, C.HWND_BOTTOM, 0, 0, 0, 0, C.SWP_NOMOVE|C.SWP_NOSIZE|C.SWP_NOACTIVATE)
 }
 
 func main() {
@@ -53,28 +32,9 @@ func main() {
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
 	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
+	glfw.WindowHint(glfw.DoubleBuffer, glfw.False)
 
-	window, err := glfw.CreateWindow(1920, 1080, "Background", nil, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	window.MakeContextCurrent()
-	if err := gl.Init(); err != nil {
-		log.Fatalln(err)
-	}
-
-	// Nice hack :)
-	hwnd := window.GetWin32Window()
-	ptr := unsafe.Pointer(hwnd)
-	hwnd2 := C.HWND(ptr)
-
-	go func() {
-		for range time.NewTicker(time.Millisecond * 10).C {
-			makeUnfocusable(hwnd2)
-			setBottomMost(hwnd2)
-		}
-	}()
+	window := winhacks.GetCanvas()
 
 	strToCol := func(s string) [4]float32 {
 		col := func(c string) float32 {
@@ -96,23 +56,60 @@ func main() {
 		gl.ClearColor(colors[0], colors[1], colors[2], colors[3])
 	}
 
-	myClear(0.2)
-	ticker := time.NewTicker(time.Millisecond * 1000)
+	intensity := 0.2
+	myClear(float32(intensity))
+	ticker := time.NewTicker(time.Millisecond * 30)
 
-	for range ticker.C {
-		if window.ShouldClose() {
-			break
-		}
-
-		// OpenGL START
-
-		myClear(0.2)
-		gl.Clear(gl.COLOR_BUFFER_BIT)
-
-		// OpenGL END
-
-		window.SwapBuffers()
+	step := func() {
+		// window.SwapBuffers()
 		glfw.PollEvents()
+    gl.Finish()
 	}
 
+	quit := make(chan bool)
+	window.SetCloseCallback(func(w *glfw.Window) {
+		quit <- true
+	})
+
+	const (
+		s = 83
+		w = 87
+	)
+	clamp := func(v, min, max float64) float64 {
+		if v < min {
+			return min
+		}
+		if v > max {
+			return max
+		}
+		return v
+	}
+	controls := make(chan bool)
+	nc, _ := client.New(nats.DefaultURL, time.Second)
+	nc.Subscribe.WH_KEYBOARD(func(kei shell.KeyboardEventInfo) {
+		if kei.VirtualKeyCode == s && kei.PreviousKeyState == false {
+			intensity -= 0.1
+		} else if kei.VirtualKeyCode == w && kei.PreviousKeyState == false {
+			intensity += 0.1
+		} else {
+			return
+		}
+		intensity = clamp(intensity, 0, 1)
+		controls <- true
+	})
+
+	for {
+		select {
+		case <-quit:
+			return
+		case <-controls:
+			myClear(float32(intensity))
+			gl.Clear(gl.COLOR_BUFFER_BIT)
+			step()
+		case <-ticker.C:
+			myClear(float32(intensity))
+			gl.Clear(gl.COLOR_BUFFER_BIT)
+			step()
+		}
+	}
 }
