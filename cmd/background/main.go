@@ -57,7 +57,7 @@ func main() {
 		gl.ClearColor(colors[0], colors[1], colors[2], colors[3])
 	}
 
-	intensity := 0.2
+	intensity := 0.6
 	myClear(float32(intensity))
 	ticker := time.NewTicker(time.Millisecond * 5000)
 
@@ -72,36 +72,14 @@ func main() {
 		quit <- true
 	})
 
-	clamp := func(v, min, max float64) float64 {
-		if v < min {
-			return min
-		}
-		if v > max {
-			return max
-		}
-		return v
-	}
-	controls := make(chan bool)
 	nc, _ := client.New(nats.DefaultURL, time.Second)
-	nc.Subscribe.WH_KEYBOARD(func(kei shell.KeyboardEventInfo) {
-		if kei.PreviousKeyState == false {
-			// appendage := strconv.FormatUint(kei.VirtualKeyCode * 13, 16)[:2]
-			// colStr = colStr + appendage
-			// colStr = colStr[len(colStr) - 8:]
-			var key glfw.Key = glfw.Key(kei.VirtualKeyCode)
-			if key%2 == 1 {
-				intensity += 0.01
-			} else {
-				intensity -= 0.01
-			}
-			intensity = clamp(intensity, 0.3, 1)
-		}
-		controls <- true
-	})
+
+	render := make(chan bool)
 
 	nc.Subscribe.WH_CBT(func(ci shell.CBTEventInfo) {
 		if ci.CBTCode == shell.HCBT_SETFOCUS {
 			winhacks.SetBottomMost(w2.Hwnd)
+			render <- true
 		}
 	})
 
@@ -109,13 +87,14 @@ func main() {
 	winhacks.SetBottomMost(w2.Hwnd)
 	window.SetMouseButtonCallback(func(w *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
 		winhacks.SetBottomMost(w2.Hwnd)
+		render <- true
 	})
 
 	for {
 		select {
 		case <-quit:
 			return
-		case <-controls:
+		case <-render:
 			myClear(float32(intensity))
 			gl.Clear(gl.COLOR_BUFFER_BIT)
 			step()

@@ -13,6 +13,7 @@ import (
 
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
+	"github.com/operdies/windows-nats-shell/pkg/utils"
 	"github.com/operdies/windows-nats-shell/pkg/utils/files"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
@@ -55,6 +56,10 @@ func ListenIndefinitely() {
 	files.SetExtentions(custom.Launcher.Extensions)
 	indexItems(custom)
 
+	// Ensure windows are computed and published at most once per second
+	batchedPublish := utils.Batcher(func() { client.Publish.WindowsUpdated(winapi.GetVisibleWindows()) },
+		time.Millisecond*100, time.Millisecond*500)
+
 	client.Subscribe.WH_CBT(func(e shell.CBTEventInfo) {
 		watched := map[shell.WM_CBT_CODE]bool{
 			shell.HCBT_ACTIVATE:   true,
@@ -68,7 +73,7 @@ func ListenIndefinitely() {
 			if e.CBTCode == shell.HCBT_DESTROYWND || e.CBTCode == shell.HCBT_CREATEWND {
 				time.Sleep(time.Millisecond * 100)
 			}
-			client.Publish.WindowsUpdated(winapi.GetVisibleWindows())
+			batchedPublish()
 		}
 	})
 	client.Subscribe.GetWindows(winapi.GetVisibleWindows)

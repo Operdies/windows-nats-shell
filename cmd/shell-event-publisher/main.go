@@ -61,7 +61,7 @@ func publishEvent(eventType string, arguments []string) {
 	}
 }
 
-func handleConn(conn net.Conn) {
+func handleConn(conn net.Conn, id int) {
 	defer conn.Close()
 	s := bufio.NewScanner(conn)
 	for s.Scan() {
@@ -77,8 +77,7 @@ func connectionListener(ln *npipe.PipeListener, id int) {
 			if err != nil {
 				fmt.Printf("err: %v\n", err.Error())
 			} else {
-				fmt.Println("New connection on:", id)
-				handleConn(conn)
+				handleConn(conn, id)
 			}
 		}()
 	}

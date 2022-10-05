@@ -11,6 +11,7 @@ There are a lot of APIs already that can be put to good use
   GetProcessList should contain extenteded, useful information 
   about the process. GetWindows is probably still different enough
   that they can both coexist.
+  Evaluate if NewProcess events are necessary
 * Kill menu
   Make an API to kill a process by its handle
 * Shortcut manager
@@ -24,8 +25,10 @@ There are a lot of APIs already that can be put to good use
   API for posting data (images or text) to the background. 
   TBD: pre-configured zones or defined per request / client?
 * Window manager 
-  Some (toggle-able) way to automatically tile windows. Try fanning strategy
+  Some (toggle-able) way to automatically tile windows. BSPC inspired layouts
+  Cycle between avant-garde fanning strategy, tall mode, and monocle mode
   Disable borders on all windows (maybe with hotkey to enable currently focused window?)
+  Mouse controls to resize / reposition windows (win+left/right drag)
 * Steam integration 
   Launch / install games
   Investigate what integrations exist / are possible
