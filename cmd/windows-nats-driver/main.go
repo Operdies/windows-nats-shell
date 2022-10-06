@@ -92,7 +92,7 @@ func ListenIndefinitely() {
 		return getFriendlyNames()
 	})
 
-	client.Subscribe.LaunchProgram(func(requested string) string {
+	launch := func(requested string, adm bool) string {
 		if requested == "" {
 			return "No program specified"
 		}
@@ -103,25 +103,35 @@ func ListenIndefinitely() {
 			return err.Error()
 		}
 
-		err = startDetachedProcess(val)
+		err = startDetachedProcess(val, adm)
 
 		if err != nil {
 			return err.Error()
 		}
 		return "Started " + requested
+	}
+	client.Subscribe.LaunchProgram(func(prog string) string {
+		return launch(prog, false)
+	})
+	client.Subscribe.LaunchProgramAsAdmin(func(prog string) string {
+		return launch(prog, true)
 	})
 	select {}
 }
 
-func startDetachedProcess(proc string) error {
+func startDetachedProcess(proc string, admin bool) error {
 	const sw_shownormal = 1
 
 	// b := make([]byte, 0)
-	empty := 0
+	empty := wintypes.LPCSTR(0)
 	procb := []byte(proc)
 	procp := unsafe.Pointer(&procb[0])
-	_, err := winapi.ShellExecute(0, wintypes.LPCSTR(empty), wintypes.LPCSTR(procp), wintypes.LPCSTR(empty), wintypes.LPCSTR(empty), sw_shownormal)
-	// shellExecute(0, "", proc, "", "", sw_shownormal)
+	verb := empty
+	if admin {
+		verb_s := []byte("runas")
+		verb = wintypes.LPCSTR(unsafe.Pointer(&verb_s[0]))
+	}
+	_, err := winapi.ShellExecute(0, verb, wintypes.LPCSTR(procp), empty, empty, sw_shownormal)
 	return err
 }
 

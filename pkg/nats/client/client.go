@@ -60,6 +60,23 @@ func (client Requester) GetPrograms() []string {
 	return programs
 }
 
+func (client Requester) LaunchProgramAsAdmin(program string) error {
+	msg, _ := client.nc.Request(system.LaunchProgramAsAdmin, utils.EncodeAny(program), client.timeout)
+	status := utils.DecodeAny[string](msg.Data)
+	if status == "Ok" {
+		return nil
+	}
+	return errors.New(string(msg.Data))
+}
+
+func (client Subscriber) LaunchProgramAsAdmin(callback func(string) string) (*nats.Subscription, error) {
+	return client.nc.Subscribe(system.LaunchProgramAsAdmin, func(msg *nats.Msg) {
+		program := utils.DecodeAny[string](msg.Data)
+		response := callback(program)
+		msg.Respond(utils.EncodeAny(response))
+	})
+}
+
 func (client Requester) LaunchProgram(program string) error {
 	msg, _ := client.nc.Request(system.LaunchProgram, utils.EncodeAny(program), client.timeout)
 	status := utils.DecodeAny[string](msg.Data)
@@ -67,6 +84,14 @@ func (client Requester) LaunchProgram(program string) error {
 		return nil
 	}
 	return errors.New(string(msg.Data))
+}
+
+func (client Subscriber) LaunchProgram(callback func(string) string) (*nats.Subscription, error) {
+	return client.nc.Subscribe(system.LaunchProgram, func(msg *nats.Msg) {
+		program := utils.DecodeAny[string](msg.Data)
+		response := callback(program)
+		msg.Respond(utils.EncodeAny(response))
+	})
 }
 
 func (client Requester) SetFocus(window uint64) bool {
@@ -120,14 +145,6 @@ func (client Subscriber) GetPrograms(callback func() []string) (*nats.Subscripti
 	return client.nc.Subscribe(system.GetPrograms, func(m *nats.Msg) {
 		windows := callback()
 		m.Respond(utils.EncodeAny(windows))
-	})
-}
-
-func (client Subscriber) LaunchProgram(callback func(string) string) (*nats.Subscription, error) {
-	return client.nc.Subscribe(system.LaunchProgram, func(msg *nats.Msg) {
-		program := utils.DecodeAny[string](msg.Data)
-		response := callback(program)
-		msg.Respond(utils.EncodeAny(response))
 	})
 }
 
