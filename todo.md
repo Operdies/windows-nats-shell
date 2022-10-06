@@ -3,9 +3,14 @@
 There are a lot of APIs already that can be put to good use
 
 * Create rofi integration
+  Investigate what is possible for rofi modules
   rofi -dmenu only supports text. This can be used to support many cases,
   but makes scripting difficult if the output should match partial strings, e.g. the hwnd from a 'SetFocus' request
   With real integration, the launcher can also ship real icons
+* GetProcessList nats endpoint
+  GetProcessList should contain extenteded, useful information 
+  about the process. GetWindows is probably still different enough
+  that they can both coexist.
 * Kill menu
   Make an API to kill a process by its handle
 * Shortcut manager
