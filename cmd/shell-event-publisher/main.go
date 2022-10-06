@@ -70,19 +70,33 @@ func handleConn(conn net.Conn) {
 	}
 }
 
+func connectionListener(ln *npipe.PipeListener, id int) {
+	for {
+		conn, err := ln.Accept()
+		go func() {
+			if err != nil {
+				fmt.Printf("err: %v\n", err.Error())
+			} else {
+				fmt.Println("New connection on:", id)
+				handleConn(conn)
+			}
+		}()
+	}
+}
+
 func server() {
 	ln, err := npipe.Listen(`\\.\pipe\shellpipe`)
 	if err != nil {
 		panic(err)
 	}
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			fmt.Printf("err: %v\n", err.Error())
-			continue
-		}
-		go handleConn(conn)
+
+	// Start several concurrent connection listeners
+	// This is to counter the case when a new connection is established
+	// before the loop rolls around to accept new connections
+	for i := 0; i < 5; i++ {
+		go connectionListener(ln, i)
 	}
+	select {}
 }
 
 func listen() {

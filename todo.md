@@ -2,10 +2,6 @@
 
 There are a lot of APIs already that can be put to good use
 
-* Fix named pipes 
-  The current implementation drops messages
-  This is patched by adding a retry mechanism
-  Track down the bug so messages are never dropped
 * Create rofi integration
   rofi -dmenu only supports text. This can be used to support many cases,
   but makes scripting difficult if the output should match partial strings, e.g. the hwnd from a 'SetFocus' request

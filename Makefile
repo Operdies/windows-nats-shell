@@ -1,12 +1,13 @@
 BINPATH=./bin
-all: 
+
+all: hookdll
 	go build -o $(BINPATH) ./...
 
 test:
 	go test -v ./...
 
 hookdll: 
-	g++ -shared  -I./c/hook-dll  -fpic ./c/hook-dll/hook.cpp -o $(BINPATH)/libhook.dll
+	gcc -O3 -shared  -I./c/hook-dll  -fpic ./c/hook-dll/hook.c -o $(BINPATH)/libhook.dll
 
 shell-event-publisher: 
 	go build -o $(BINPATH)/shell-event-publisher.exe ./cmd/shell-event-publisher/
