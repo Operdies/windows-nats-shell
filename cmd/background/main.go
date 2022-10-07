@@ -2,12 +2,12 @@ package main
 
 import (
 	"runtime"
-	"strconv"
 	"time"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/nats-io/nats.go"
+	"github.com/operdies/windows-nats-shell/cmd/background/colors"
 	"github.com/operdies/windows-nats-shell/cmd/background/winhacks"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
@@ -37,20 +37,9 @@ func main() {
 	w2 := winhacks.GetCanvas()
 	window := w2.GlfwWindow
 
-	strToCol := func(s string) [4]float32 {
-		col := func(c string) float32 {
-			v, _ := strconv.ParseUint(c, 16, 8)
-			return float32(v) / 255
-		}
-		a := s[:2]
-		r := s[2:4]
-		g := s[4:6]
-		b := s[6:]
-		return [4]float32{col(r), col(g), col(b), col(a)}
-	}
-	colStr := "00ac21c4"
+	colStr := colors.Purple
 	myClear := func(intensity float32) {
-		colors := strToCol(colStr)
+		colors, _ := colors.StringToColor(colStr)
 		for i := range colors {
 			colors[i] *= intensity
 		}
@@ -91,17 +80,14 @@ func main() {
 	})
 
 	for {
+		myClear(float32(intensity))
+		gl.Clear(gl.COLOR_BUFFER_BIT)
+		step()
 		select {
 		case <-quit:
 			return
 		case <-render:
-			myClear(float32(intensity))
-			gl.Clear(gl.COLOR_BUFFER_BIT)
-			step()
 		case <-ticker.C:
-			myClear(float32(intensity))
-			gl.Clear(gl.COLOR_BUFFER_BIT)
-			step()
 		}
 	}
 }

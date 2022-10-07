@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/operdies/windows-nats-shell/cmd/hotkey-manager/border-control"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
@@ -15,6 +13,7 @@ type VKEY = int
 const (
 	BACKSPACE VKEY = 8
 	WIN            = 91
+	A              = 65
 	B              = 66
 	SHIFT          = 16
 	ALT            = 18
@@ -50,12 +49,7 @@ func main() {
 					}
 				}
 			}
-
 		}
-		// if kei.ContextCode && kei.PreviousKeyState == false && kei.VirtualKeyCode == BACKSPACE {
-		// 	// foc := winapi.GetForegroundWindow()
-		// }
 	})
-	fmt.Println("Lets go")
 	select {}
 }
