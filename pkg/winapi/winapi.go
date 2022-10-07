@@ -38,7 +38,7 @@ var (
 	getProcAddress = kernel.MustFindProc("GetProcAddress")
 
 	shell32       = syscall.MustLoadDLL("shell32.dll")
-	shellExecuteW = shell32.MustFindProc("ShellExecuteA")
+	shellExecuteA = shell32.MustFindProc("ShellExecuteA")
 
 	Shlwapi          = syscall.MustLoadDLL("Shlwapi.dll")
 	assocQueryString = Shlwapi.MustFindProc("AssocQueryStringA")
@@ -50,7 +50,7 @@ func AssocQueryString(flags wintypes.AssocF, str wintypes.AssocStr, pszAssoc, ps
 }
 
 func ShellExecute(hwnd wintypes.HWND, lpOperation, lpFile, lpParameters, lpDirectory wintypes.LPCSTR, nShowCmd int) (wintypes.HINSTANCE, error) {
-	r, _, err := shellExecuteW.Call(uintptr(hwnd), uintptr(lpOperation), uintptr(lpFile), uintptr(lpParameters), uintptr(lpDirectory), uintptr(nShowCmd))
+	r, _, err := shellExecuteA.Call(uintptr(hwnd), uintptr(lpOperation), uintptr(lpFile), uintptr(lpParameters), uintptr(lpDirectory), uintptr(nShowCmd))
 	if r >= 32 {
 		err = nil
 	}

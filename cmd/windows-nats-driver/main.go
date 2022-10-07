@@ -96,7 +96,6 @@ func ListenIndefinitely() {
 		if requested == "" {
 			return "No program specified"
 		}
-		fmt.Println("Got command to start", requested)
 		val, err := getPathExecutable(requested)
 
 		if err != nil {
@@ -119,19 +118,21 @@ func ListenIndefinitely() {
 	select {}
 }
 
+func strPtr(s string) wintypes.LPCSTR {
+	v := []byte(s)
+	vv := unsafe.Pointer(&v[0])
+	return wintypes.LPCSTR(vv)
+}
+
 func startDetachedProcess(proc string, admin bool) error {
 	const sw_shownormal = 1
-
-	// b := make([]byte, 0)
-	empty := wintypes.LPCSTR(0)
-	procb := []byte(proc)
-	procp := unsafe.Pointer(&procb[0])
-	verb := empty
+	procPtr := strPtr(proc)
+	var verbPtr wintypes.LPCSTR = 0
 	if admin {
-		verb_s := []byte("runas")
-		verb = wintypes.LPCSTR(unsafe.Pointer(&verb_s[0]))
+		verb := `runas`
+		verbPtr = strPtr(verb)
 	}
-	_, err := winapi.ShellExecute(0, verb, wintypes.LPCSTR(procp), empty, empty, sw_shownormal)
+	_, err := winapi.ShellExecute(0, verbPtr, procPtr, 0, 0, sw_shownormal)
 	return err
 }
 
