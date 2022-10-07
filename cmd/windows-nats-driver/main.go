@@ -11,11 +11,13 @@ import (
 
 	"github.com/nats-io/nats.go"
 
+	screenApi "github.com/operdies/windows-nats-shell/pkg/nats/api/screen"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/utils"
 	"github.com/operdies/windows-nats-shell/pkg/utils/files"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/screen"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
@@ -114,6 +116,12 @@ func ListenIndefinitely() {
 	})
 	client.Subscribe.LaunchProgramAsAdmin(func(prog string) string {
 		return launch(prog, true)
+	})
+	client.Subscribe.GetResolution(func() screenApi.Resolution {
+		return screen.GetResolution()
+	})
+	client.Subscribe.SetResolution(func(r screenApi.Resolution) error {
+		return screen.SetResolution(r)
 	})
 	select {}
 }

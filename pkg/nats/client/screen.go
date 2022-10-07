@@ -18,12 +18,12 @@ func (client Subscriber) GetResolution(callback func() screen.Resolution) (*nats
 	})
 }
 
-func (client Requester) SetResolution(r screen.Resolution) bool {
+func (client Requester) SetResolution(r screen.Resolution) error {
 	response, _ := client.nc.Request(screen.SetResolution, utils.EncodeAny(r), client.timeout)
-	return utils.DecodeAny[bool](response.Data)
+	return utils.DecodeAny[error](response.Data)
 }
 
-func (client Subscriber) SetResolution(callback func(screen.Resolution) bool) (*nats.Subscription, error) {
+func (client Subscriber) SetResolution(callback func(screen.Resolution) error) (*nats.Subscription, error) {
 	return client.nc.Subscribe(screen.SetResolution, func(msg *nats.Msg) {
 		resolution := utils.DecodeAny[screen.Resolution](msg.Data)
 		result := callback(resolution)

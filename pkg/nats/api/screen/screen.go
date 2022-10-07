@@ -8,6 +8,6 @@ const (
 )
 
 type Resolution struct {
-	Width  uint
-	Height uint
+	Width  uint32
+	Height uint32
 }

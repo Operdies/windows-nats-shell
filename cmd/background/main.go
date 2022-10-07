@@ -48,7 +48,7 @@ func main() {
 
 	intensity := 0.6
 	myClear(float32(intensity))
-	ticker := time.NewTicker(time.Millisecond * 5000)
+	ticker := time.NewTicker(time.Millisecond * 500)
 
 	step := func() {
 		// window.SwapBuffers()
