@@ -50,12 +50,6 @@ func main() {
 	myClear(float32(intensity))
 	ticker := time.NewTicker(time.Millisecond * 500)
 
-	step := func() {
-		// window.SwapBuffers()
-		glfw.PollEvents()
-		gl.Finish()
-	}
-
 	quit := make(chan bool)
 	window.SetCloseCallback(func(w *glfw.Window) {
 		quit <- true
@@ -75,14 +69,19 @@ func main() {
 	winhacks.MakeToolWindow(w2.Hwnd)
 	winhacks.SetBottomMost(w2.Hwnd)
 	window.SetMouseButtonCallback(func(w *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
-		winhacks.SetBottomMost(w2.Hwnd)
-		render <- true
+		// Writing to a channel seems to cause a deadlock.
+		// It works fine when doing it from a goroutine. Strange
+		go func() {
+			winhacks.SetBottomMost(w2.Hwnd)
+			render <- true
+		}()
 	})
 
 	for {
 		myClear(float32(intensity))
 		gl.Clear(gl.COLOR_BUFFER_BIT)
-		step()
+		glfw.PollEvents()
+		gl.Finish()
 		select {
 		case <-quit:
 			return
