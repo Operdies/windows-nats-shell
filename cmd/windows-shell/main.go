@@ -28,6 +28,7 @@ func parseCfg(path string) (config *shell.Configuration, err error) {
 		return
 	}
 	config = &cfg
+	config.Path = path
 	return
 }
 
@@ -116,6 +117,14 @@ func start(config *shell.Configuration) bool {
 	s, _ = client.Subscribe.RestartService(func(s string) error {
 		job, ok := jobs[s]
 		if ok {
+			cfg2, err := parseCfg(config.Path)
+			if err != nil {
+				fmt.Printf("Error in config: %v", err)
+			} else {
+				if newCfg, ok := cfg2.Services[s]; ok {
+					config.Services[s] = newCfg
+				}
+			}
 			return job.Restart()
 		}
 		return fmt.Errorf("Service '%s' is not configured.", s)

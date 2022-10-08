@@ -65,6 +65,7 @@ func GetCustom[T any](s Service) (result T, err error) {
 }
 
 type Configuration struct {
+	Path     string // Path to the file the config was loaded from
 	Services map[string]Service
 }
 

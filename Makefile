@@ -17,3 +17,6 @@ windows-nats-driver:
 
 windows-shell: 
 	go build -o $(BINPATH)/windows-shell.exe ./cmd/windows-shell/
+
+background: 
+	go build -o $(BINPATH)/background.exe ./cmd/background/
