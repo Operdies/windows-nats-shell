@@ -6,9 +6,13 @@ services:
     custom:
       background:
         path: C:/Users/alexw/Documents/wallpaper.png
+      shader:
+        vert: C:/Users/alexw/repos/minimalist-shell/cmd/background/vert.shader
+        frag: C:/Users/alexw/repos/minimalist-shell/cmd/background/frag.shader
       render:
-        updaterate: 500 # Update rate in milliseconds
-        clearcolor: #ac21c4
+        updaterate: 2000 # Update rate in milliseconds
+        clearcolor: 423
+        # clearcolor: "#701278"
   shell-event-publisher:
     autorestart: false
     executable: ./bin/shell-event-publisher.exe

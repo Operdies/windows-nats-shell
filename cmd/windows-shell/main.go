@@ -125,7 +125,10 @@ func start(config *shell.Configuration) bool {
 					config.Services[s] = newCfg
 				}
 			}
-			return job.Restart()
+			job.Stop()
+			job = service.NewProcessJob(s, config.Services[s])
+			jobs[s] = job
+			go job.Start()
 		}
 		return fmt.Errorf("Service '%s' is not configured.", s)
 	})

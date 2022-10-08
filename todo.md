@@ -21,7 +21,6 @@ There are a lot of APIs already that can be put to good use
   Could such a hook run in GO since keyboard hooks don't have the 'other module' requirement?
   Can we drop the NATS keylogger?
 # Background 
-  Investigate freezes ?
   Configurable shaders 
   API for posting data (images or text) to the background. 
   TBD: pre-configured zones or defined per request / client?

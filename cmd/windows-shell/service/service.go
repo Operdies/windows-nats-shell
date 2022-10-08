@@ -13,7 +13,6 @@ import (
 type Jobber interface {
 	Start() error
 	Stop() error
-	Restart() error
 }
 
 type ProcessJob struct {
@@ -147,15 +146,6 @@ func (j *ProcessJob) Stop() (err error) {
 
 	err = CombineErrors(killError, waitErr, timeoutErr)
 	return
-}
-
-func (j *ProcessJob) Restart() error {
-	// fmt.Printf("Restart %s\n", j.name)
-
-	stopError := j.Stop()
-	startErr := j.Start()
-
-	return CombineErrors(stopError, startErr)
 }
 
 func NewProcessJob(name string, service shell.Service) *ProcessJob {

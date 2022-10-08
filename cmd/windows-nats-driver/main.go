@@ -21,21 +21,17 @@ import (
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
-type executableSource struct {
-	Path      string
-	Recursive bool
-	Watch     bool
-}
-
-type launcherOptions struct {
-	Extensions        []string
-	IncludeSystemPath bool
-	WatchSystemPath   bool
-	Sources           []executableSource
-}
-
 type customOptions struct {
-	Launcher launcherOptions
+	Launcher struct {
+		Extensions        []string
+		IncludeSystemPath bool
+		WatchSystemPath   bool
+		Sources           []struct {
+			Path      string
+			Recursive bool
+			Watch     bool
+		}
+	}
 }
 
 func superFocusStealer(handle wintypes.HWND) wintypes.BOOL {
