@@ -6,75 +6,19 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
-	"strings"
 	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/operdies/windows-nats-shell/cmd/windows-shell/service"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
-	"gopkg.in/yaml.v3"
 )
-
-func parseCfg(path string) (config *shell.Configuration, err error) {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return
-	}
-	var cfg shell.Configuration
-	err = yaml.Unmarshal(content, &cfg)
-	if err != nil {
-		return
-	}
-	config = &cfg
-	config.Path = path
-	return
-}
-
-func loadConfig() *string {
-	fileExists := func(f string) bool {
-		_, err := os.Stat(f)
-		return err == nil
-	}
-
-	for _, cand := range getConfigPaths() {
-		if fileExists(cand) {
-			return &cand
-		}
-	}
-	return nil
-}
-
-func getExeDir() string {
-	thisExe := os.Args[0]
-	for i := len(thisExe) - 1; i >= 0; i = i - 1 {
-		if thisExe[i] == '\\' || thisExe[i] == '/' {
-			thisDir := thisExe[:i]
-			return strings.ReplaceAll(thisDir, "\\", "/")
-		}
-	}
-	return ""
-}
-
-func getConfigPaths() []string {
-	result := make([]string, 0)
-	exeDir := getExeDir()
-	if exeDir != "" {
-		result = append(result, path.Join(exeDir, "config.yml"))
-		result = append(result, path.Join(path.Dir(exeDir), "config.yml"))
-	}
-
-	wd, _ := os.Getwd()
-	result = append(result, path.Join(wd, "config.yml"))
-
-	return result
-}
 
 func truther() *bool {
 	b := true
 	return &b
 }
+
 func falser() *bool {
 	b := false
 	return &b
@@ -117,7 +61,7 @@ func start(config *shell.Configuration) bool {
 	s, _ = client.Subscribe.RestartService(func(s string) error {
 		job, ok := jobs[s]
 		if ok {
-			cfg2, err := parseCfg(config.Path)
+			cfg2, err := config.Reload()
 			if err != nil {
 				fmt.Printf("Error in config: %v", err)
 			} else {
@@ -196,21 +140,13 @@ func start(config *shell.Configuration) bool {
 }
 
 func main() {
-	configFile := loadConfig()
-	if configFile == nil {
-		panic("No config file found")
-	}
-
-	config, err := parseCfg(*configFile)
-	if err != nil {
-		panic(err.Error())
-	}
+	config := shell.LoadDefault()
 
 	home, _ := os.UserHomeDir()
 	os.Chdir(home)
 
 	for start(config) {
-		config2, err := parseCfg(*configFile)
+		config2, err := config.Reload()
 		if err != nil {
 			fmt.Println("Error in reloaded config:", err.Error())
 			fmt.Println("Services were restarted, but no changes were made.")

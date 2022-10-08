@@ -1,6 +1,12 @@
 package shell
 
-import "gopkg.in/yaml.v3"
+import (
+	"os"
+	"path"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
 
 const (
 	// Restart a service by name
@@ -212,4 +218,78 @@ func WhKeyboardEvent(nCode KeyEventCode, wParam uintptr, lParam uintptr) Keyboar
 	evt.PreviousKeyState = bitRange(uint64(lParam), 30, 30) == 1
 	evt.TransitionState = bitRange(uint64(lParam), 31, 31) == 1
 	return evt
+}
+
+func parseCfg(path string) (config *Configuration, err error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	var cfg Configuration
+	err = yaml.Unmarshal(content, &cfg)
+	if err != nil {
+		return
+	}
+	config = &cfg
+	config.Path = path
+	return
+}
+
+func loadConfig() *string {
+	fileExists := func(f string) bool {
+		_, err := os.Stat(f)
+		return err == nil
+	}
+
+	for _, cand := range getConfigPaths() {
+		if fileExists(cand) {
+			return &cand
+		}
+	}
+	return nil
+}
+
+func getExeDir() string {
+	thisExe := os.Args[0]
+	for i := len(thisExe) - 1; i >= 0; i = i - 1 {
+		if thisExe[i] == '\\' || thisExe[i] == '/' {
+			thisDir := thisExe[:i]
+			return strings.ReplaceAll(thisDir, "\\", "/")
+		}
+	}
+	return ""
+}
+
+func getConfigPaths() []string {
+	result := make([]string, 0)
+	exeDir := getExeDir()
+	if exeDir != "" {
+		result = append(result, path.Join(exeDir, "config.yml"))
+		result = append(result, path.Join(path.Dir(exeDir), "config.yml"))
+	}
+
+	wd, _ := os.Getwd()
+	result = append(result, path.Join(wd, "config.yml"))
+
+	return result
+}
+
+func LoadDefault() *Configuration {
+	path := loadConfig()
+	if path == nil {
+		panic("No config file found")
+	}
+	cfg, err := parseCfg(*path)
+	if err != nil {
+		panic(err)
+	}
+	return cfg
+}
+
+func (c *Configuration) Reload() (cfg *Configuration, err error) {
+	cfg, err = parseCfg(c.Path)
+	if err != nil {
+		return c, err
+	}
+	return cfg, nil
 }
