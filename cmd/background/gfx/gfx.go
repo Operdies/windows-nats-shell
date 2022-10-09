@@ -39,7 +39,6 @@ type Uniform struct {
 func (program *Program) SetUniform(uniform *Uniform, value float32) {
 	switch uniform.GlType {
 	case FLOAT:
-		fmt.Printf("Setting %v to %v\n", uniform, value)
 		gl.Uniform1f(uniform.Location, value)
 	}
 }
@@ -58,8 +57,6 @@ func (program *Program) GetUniforms() []Uniform {
 		uniform.Name = string(buf[:nameLength])
 		uniform.Location = i
 		uniform.GlType = int(tp)
-		loc := program.GetUniformLocation(uniform.Name)
-		fmt.Printf("Index: %d, loc: %d\n", i, loc)
 		result = append(result, uniform)
 	}
 

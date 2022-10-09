@@ -114,6 +114,7 @@ func main() {
 
 	gl.ClearColor(colors[0], colors[1], colors[2], colors[3])
 	ticker := time.NewTicker(time.Millisecond * time.Duration(custom.Render.Updaterate))
+	poller := time.NewTicker(time.Millisecond * 20)
 
 	quit := make(chan bool)
 	window.SetCloseCallback(func(w *glfw.Window) {
@@ -181,9 +182,8 @@ func main() {
 	}
 
 	first := true
-	for {
+	doRender := func() {
 		fixResolution(first)
-		first = false
 		gl.ClearColor(colors[0], colors[1], colors[2], colors[3])
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 		gl.BindVertexArray(vao)
@@ -191,11 +191,21 @@ func main() {
 		gl.BindVertexArray(0)
 		glfw.PollEvents()
 		gl.Finish()
+	}
+
+	doRender()
+	first = false
+
+	for {
 		select {
 		case <-quit:
 			return
 		case <-render:
+			doRender()
 		case <-ticker.C:
+			doRender()
+		case <-poller.C:
+			glfw.PollEvents()
 		}
 	}
 }
