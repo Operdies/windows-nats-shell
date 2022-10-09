@@ -12,9 +12,9 @@ services:
         clearcolor: 423
         # clearcolor: "#701278"
   shell-event-publisher:
-    executable: ./shell-event-publisher.exe
+    executable: ./shell.exe
   windows-nats-driver:
-    executable: ./windows-nats-driver.exe
+    executable: ./driver.exe
     custom:
       launcher:
         includesystempath: true
@@ -34,7 +34,7 @@ services:
             recursive: true 
             watch: true
   hotkey-manager:
-    executable: ./hotkey-manager.exe
+    executable: ./hotkeys.exe
     custom:
       keymap:
         - keys: ctrl+alt+r

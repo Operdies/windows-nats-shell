@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	"github.com/operdies/windows-nats-shell/cmd/windows-shell/service"
+	"github.com/operdies/windows-nats-shell/cmd/shell/service"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 )

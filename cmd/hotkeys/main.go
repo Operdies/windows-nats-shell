@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/operdies/windows-nats-shell/cmd/hotkey-manager/keymap"
+	"github.com/operdies/windows-nats-shell/cmd/hotkeys/keymap"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 )

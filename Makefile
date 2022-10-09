@@ -9,17 +9,17 @@ test:
 hookdll: 
 	gcc -O3 -shared  -I./c/hook-dll  -fpic ./c/hook-dll/hook.c -o $(BINPATH)/libhook.dll
 
-shell-event-publisher: 
-	go build -o $(BINPATH)/shell-event-publisher.exe ./cmd/shell-event-publisher/
+events: 
+	go build -o $(BINPATH)/events.exe ./cmd/events/
 
-windows-nats-driver: 
-	go build -o $(BINPATH)/windows-nats-driver.exe ./cmd/windows-nats-driver/
+driver: 
+	go build -o $(BINPATH)/driver.exe ./cmd/driver/
 
-windows-shell: 
-	go build -o $(BINPATH)/windows-shell.exe ./cmd/windows-shell/
+shell: 
+	go build -o $(BINPATH)/shell.exe ./cmd/shell/
 
 background: 
 	go build -o $(BINPATH)/background.exe ./cmd/background/
 
-hotkey-manager: 
-	go build -o $(BINPATH)/hotkey-manager.exe ./cmd/hotkey-manager/
+hotkeys: 
+	go build -o $(BINPATH)/hotkeys.exe ./cmd/hotkeys/
