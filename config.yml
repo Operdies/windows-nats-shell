@@ -1,8 +1,6 @@
 services:
   background:
-    autorestart: false
-    executable: ./bin/background.exe
-    workingdirectory: C:/Users/alexw/repos/minimalist-shell
+    executable: ./background.exe
     custom:
       background:
         path: C:/Users/alexw/Documents/wallpaper.png
@@ -14,10 +12,9 @@ services:
         clearcolor: 423
         # clearcolor: "#701278"
   shell-event-publisher:
-    autorestart: false
-    executable: ./bin/shell-event-publisher.exe
-    workingdirectory: C:/Users/alexw/repos/minimalist-shell
+    executable: ./shell-event-publisher.exe
   windows-nats-driver:
+    executable: ./windows-nats-driver.exe
     custom:
       launcher:
         includesystempath: true
@@ -36,23 +33,8 @@ services:
           - path: "C:/ProgramData/Microsoft/Windows/Start Menu/"
             recursive: true 
             watch: true
-    executable: ./bin/windows-nats-driver.exe
-    workingdirectory: C:/Users/alexw/repos/minimalist-shell
-    autorestart: true
-  nvim-server:
-    executable: nvim.exe
-    arguments:
-      - --headless
-      - --listen
-      - 0.0.0.0:6666
-    workingdirectory: C:/Users/alexw/repos
-    autorestart: true
-    forwardstdout: false
-    forwardstderror: false
-    forwardstdin: false
   hotkey-manager:
-    executable: ./bin/hotkey-manager.exe
-    workingdirectory: C:/Users/alexw/repos/minimalist-shell
+    executable: ./hotkey-manager.exe
     custom:
       keymap:
         - keys: ctrl+alt+r
