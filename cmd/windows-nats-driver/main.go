@@ -15,7 +15,7 @@ import (
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/utils"
-	"github.com/operdies/windows-nats-shell/pkg/utils/files"
+	"github.com/operdies/windows-nats-shell/pkg/utils/filewatcher"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/screen"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
@@ -37,6 +37,7 @@ type customOptions struct {
 func superFocusStealer(handle wintypes.HWND) wintypes.BOOL {
 	// We should probably reset this...
 	winapi.SystemParametersInfoA(wintypes.SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, wintypes.SPIF_SENDCHANGE)
+	// winapi.ShowWindow(handle, wintypes.SW_RESTORE)
 	success := winapi.SetForegroundWindow(handle)
 
 	return success
@@ -51,7 +52,7 @@ func ListenIndefinitely() {
 		panic(err)
 	}
 	custom, _ := shell.GetCustom[customOptions](cfg)
-	files.SetExtentions(custom.Launcher.Extensions)
+	filewatcher.SetExtentions(custom.Launcher.Extensions)
 	indexItems(custom)
 
 	// Ensure windows are computed and published at most once per second
@@ -195,12 +196,12 @@ func getPathExecutable(s string) (prog string, err error) {
 var (
 	// menuItems map[string]string
 	// indexMut  sync.Mutex
-	watchers = make([]*files.WatchedDir, 0, 20)
+	watchers = make([]*filewatcher.WatchedDir, 0, 20)
 )
 
 func indexItems(custom customOptions) {
 	for _, source := range custom.Launcher.Sources {
-		watchers = append(watchers, files.Create(source.Path, source.Recursive, source.Watch))
+		watchers = append(watchers, filewatcher.Create(source.Path, source.Recursive, source.Watch))
 	}
 
 	if custom.Launcher.IncludeSystemPath {
@@ -211,7 +212,7 @@ func indexItems(custom customOptions) {
 					// path/to/whatever does not exist
 					continue
 				}
-				watchers = append(watchers, files.Create(dir, false, custom.Launcher.WatchSystemPath))
+				watchers = append(watchers, filewatcher.Create(dir, false, custom.Launcher.WatchSystemPath))
 			}
 		}
 	}

@@ -71,8 +71,10 @@ func start(config *shell.Configuration) bool {
 			}
 			job.Stop()
 			job = service.NewProcessJob(s, config.Services[s])
+			job.StartCount = jobs[s].StartCount
 			jobs[s] = job
 			go job.Start()
+			return nil
 		}
 		return fmt.Errorf("Service '%s' is not configured.", s)
 	})

@@ -23,6 +23,7 @@ var (
 	unhookWindowsHookEx      = user32.MustFindProc("UnhookWindowsHookEx")
 	getForegroundWindow      = user32.MustFindProc("GetForegroundWindow")
 	setForegroundWindow      = user32.MustFindProc("SetForegroundWindow")
+	showWindow               = user32.MustFindProc("ShowWindow")
 	attachThreadInput        = user32.MustFindProc("AttachThreadInput")
 	getWindowThreadProcessId = user32.MustFindProc("GetWindowThreadProcessId")
 	systemParametersInfoA    = user32.MustFindProc("SystemParametersInfoA")
@@ -44,6 +45,10 @@ var (
 	assocQueryString = Shlwapi.MustFindProc("AssocQueryStringA")
 )
 
+func ShowWindow(hwnd wintypes.HWND, nCmdShow wintypes.N_CMD_SHOW) bool {
+	r, _, _ := showWindow.Call(uintptr(hwnd), uintptr(nCmdShow))
+	return r != 0
+}
 func AssocQueryString(flags wintypes.AssocF, str wintypes.AssocStr, pszAssoc, pszExtra wintypes.LPCSTR, pszOut wintypes.LPSTR, pcchOut uintptr) wintypes.HRESULT {
 	r, _, _ := assocQueryString.Call(uintptr(flags), uintptr(str), uintptr(pszAssoc), uintptr(pszExtra), uintptr(pszOut), pcchOut)
 	return wintypes.HRESULT(r)

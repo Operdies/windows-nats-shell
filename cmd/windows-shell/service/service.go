@@ -17,7 +17,7 @@ type Jobber interface {
 
 type ProcessJob struct {
 	restart    bool
-	startCount int
+	StartCount int
 	service    *shell.Service
 	cmd        *exec.Cmd
 	name       string
@@ -68,8 +68,8 @@ func (j *ProcessJob) Start() error {
 	if j.cmd != nil {
 		return fmt.Errorf("Process %s is already running.", j.name)
 	}
-	j.startCount += 1
-	fmt.Printf("Starting %s. (%d)\n", j.name, j.startCount)
+	j.StartCount += 1
+	fmt.Printf("Starting %s. (%d)\n", j.name, j.StartCount)
 
 	j.restart = *j.service.AutoRestart == true
 	prog := j.service
