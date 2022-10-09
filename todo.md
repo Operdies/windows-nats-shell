@@ -1,4 +1,5 @@
 # diary
+Scribblings of a madman
 
 ## Create rofi integration
   Investigate what is possible for rofi modules
@@ -47,23 +48,27 @@
 
 ## Thought cabinet
   > Service namespaces?
+
   Services where multiple instances make sense should really use namespaces. The clients should probably support namespaces in some way 
   The environment variable containing the service name could just be prepended as a subject where it makes sense. But then 
   then e.g. Requester clients also have to require the namespace as an input. Do clients care which instance responds?
 
   > How can input/output be implemented? Named actions?
+
   `... payload: { hwnd: $action1.hwnd, command: $action2.command }` ?
   Then actions with no dependencies can simply be `publish`ed. A dependency tree must be built of other actions.
   There should probably be a panic during startup if circular dependencies are detected.
   There should also be a startup panic if collisions are detected.
 
   > Should all APIs require complex type inputs ?
+
   Should all e.g. Windows APIs require a window as input? If an action only requires e.g. `hwnd` to be set, the input can just be `hwnd: 1234`
   More generally, should all X apis take an input of the same form as their outputs? It would make it possible to return meaningful errors.
   Rofi integration is a prerequisite for this, because the alternative is way too complicated on the scripting side.
 
 
   > When are stdout/stderr logs consumed?
+
   It does not seem like a viable solution to store all logs in memory indefinitely.
   It would make the most sense if logs are published immediately as they arrive, 
   and then discarded by the shell. If anyone cares about the logs they must subscribe to them.
