@@ -6,7 +6,7 @@ Scribblings of a madman
   rofi -dmenu only supports text. This can be used to support many cases,
   but makes scripting difficult if the output should match partial strings, e.g. the hwnd from a 'SetFocus' request
   With real integration, the launcher can also ship real icons
-## GetProcessList nats endpoint
+## GetProcessList nats subject
   GetProcessList should contain extenteded, useful information 
   about the process. GetWindows is probably still different enough
   that they can both coexist.
@@ -24,6 +24,12 @@ Scribblings of a madman
 ## Shortcut manager
   Implement keyboard hook in GO in order to intercept keys that are mapped.
   Add a configuration override to pass through mapped keys
+  Fix bug where the same keyevents are duplicated in Chrome 
+  -- In general I think this happens when key events are posted to multiple receivers.
+  I'm not sure what the best way to tackle this is. Do all keyboard listeners implement 
+  throttling, or does the event publisher throttle keys?
+  -- Should there be a different subject for "give me real keystrokes" and "give me all key events"?
+  
 ## Background 
   API for posting data (images or text) to the background. TBD: pre-configured zones or defined per request / client?
 ## Window manager 

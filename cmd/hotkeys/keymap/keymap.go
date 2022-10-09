@@ -135,6 +135,11 @@ func (k *Keymap) ProcessEvent(kei shell.KeyboardEventInfo) {
 
 	// Update the modifier state if the key is a modifier
 	vkey := VKEY(kei.VirtualKeyCode)
+	// Clear the keymap when escape is pressed
+	if vkey == VK_ESCAPE {
+		k.activeMods = map[VKEY]bool{}
+		return
+	}
 	k.activeMods[vkey] = isPress
 
 	// Let's only ever fire events when keys are released

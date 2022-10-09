@@ -51,3 +51,8 @@ services:
             - nats: 
                 subject: System.LaunchProgramAsAdmin
                 payload: pwsh.exe
+        - keys: pause 
+          actions: 
+            - nats:
+                subject: System.LaunchProgram 
+                payload: Google Chrome.lnk
