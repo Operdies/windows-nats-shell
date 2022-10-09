@@ -11,9 +11,9 @@ services:
         updaterate: 2000 # Update rate in milliseconds
         clearcolor: 423
         # clearcolor: "#701278"
-  shell-event-publisher:
-    executable: ./shell.exe
-  windows-nats-driver:
+  events:
+    executable: ./events.exe
+  driver:
     executable: ./driver.exe
     custom:
       launcher:
@@ -33,7 +33,7 @@ services:
           - path: "C:/ProgramData/Microsoft/Windows/Start Menu/"
             recursive: true 
             watch: true
-  hotkey-manager:
+  hotkeys:
     executable: ./hotkeys.exe
     custom:
       keymap:

@@ -127,11 +127,10 @@ func start(config *shell.Configuration) bool {
 }
 
 func main() {
-	config := shell.LoadDefault()
-
 	exe := os.Args[0]
 	here := filepath.Dir(exe)
 	os.Chdir(here)
+	config := shell.LoadDefault()
 
 	for start(config) {
 		config2, err := config.Reload()
