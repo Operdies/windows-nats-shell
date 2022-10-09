@@ -20,3 +20,6 @@ windows-shell:
 
 background: 
 	go build -o $(BINPATH)/background.exe ./cmd/background/
+
+hotkey-manager: 
+	go build -o $(BINPATH)/hotkey-manager.exe ./cmd/hotkey-manager/

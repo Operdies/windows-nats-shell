@@ -1,10 +1,9 @@
 package main
 
 import (
-	"github.com/operdies/windows-nats-shell/cmd/hotkey-manager/border-control"
+	"github.com/operdies/windows-nats-shell/cmd/hotkey-manager/keymap"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
-	"github.com/operdies/windows-nats-shell/pkg/winapi"
 )
 
 // Virtual keycodes
@@ -21,35 +20,12 @@ const (
 )
 
 func main() {
-	mods := map[VKEY]bool{
-		WIN:   false,
-		SHIFT: false,
-		ALT:   false,
-		CTRL:  false,
-	}
-
 	c := client.Default()
-	c.Subscribe.WH_KEYBOARD(func(kei shell.KeyboardEventInfo) {
-		// combo: alt + backspace
+	km := keymap.Create()
 
-		// Initial click
-		isPress := kei.PreviousKeyState == false
-		isRelease := kei.PreviousKeyState && kei.TransitionState
-		if isPress || isRelease {
-			k := VKEY(kei.VirtualKeyCode)
-			if _, ok := mods[k]; ok {
-				mods[k] = isPress
-			} else if k == B {
-				if mods[WIN] {
-					foc := winapi.GetForegroundWindow()
-					if mods[SHIFT] {
-						border.Disable(foc)
-					} else {
-						border.Enable(foc)
-					}
-				}
-			}
-		}
-	})
+	// Maybe this needs to be a WindowsHookEvent callback in the future.
+	// For simplicity, let's stick to subscribing for now.
+	// A windows hook event would allow us to avoid propagating handled events
+	c.Subscribe.WH_KEYBOARD(func(kei shell.KeyboardEventInfo) { km.ProcessEvent(kei) })
 	select {}
 }

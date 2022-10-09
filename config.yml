@@ -7,8 +7,8 @@ services:
       background:
         path: C:/Users/alexw/Documents/wallpaper.png
       shader:
-        vert: C:/Users/alexw/repos/minimalist-shell/cmd/background/vert.shader
-        frag: C:/Users/alexw/repos/minimalist-shell/cmd/background/frag.shader
+        vert: C:/Users/alexw/repos/minimalist-shell/cmd/background/shader.vert
+        frag: C:/Users/alexw/repos/minimalist-shell/cmd/background/shader.frag
       render:
         updaterate: 2000 # Update rate in milliseconds
         clearcolor: 423
@@ -51,27 +51,21 @@ services:
     forwardstderror: false
     forwardstdin: false
   hotkey-manager:
-    autorestart: false
     executable: ./bin/hotkey-manager.exe
     workingdirectory: C:/Users/alexw/repos/minimalist-shell
     custom:
       keymap:
-        - keys: ctrl+alt+shift+b 
-          actions: 
-            - nats pub WindowControls.ShowBorder
-        - keys: ctrl+alt+b 
-          actions: 
-            - nats pub WindowControls.HideBorder
-        - keys: ctrl+win+left
+        - keys: ctrl+alt+r
           actions:
-            - nats pub WindowControls.TileLeft
-        - keys: ctrl+win+right
-          actions:
-            - nats pub WindowControls.TileRight
-        - keys: ctrl+win+up
-          actions:
-            - nats pub WindowControls.Maximize
-        - keys: ctrl+win+w 
+            - nats:
+                subject: Shell.Restart
+        - keys: ctrl+shift+p
           actions: 
-            - nats pub WindowControls.Cycle
-
+            - nats: 
+                subject: System.LaunchProgram
+                payload: pwsh.exe
+        - keys: ctrl+alt+shift+p
+          actions: 
+            - nats: 
+                subject: System.LaunchProgramAsAdmin
+                payload: pwsh.exe

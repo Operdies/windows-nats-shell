@@ -12,6 +12,13 @@ There are a lot of APIs already that can be put to good use
   about the process. GetWindows is probably still different enough
   that they can both coexist.
   Evaluate if NewProcess events are necessary
+# NATS process IO 
+  StartProgram could return a hwnd that could be used as a subject 
+  to send stdin / request stdout
+# Service logs 
+  logs for services could be stored in a sqlite database
+  and be queried using NATS. Then there would be no need 
+  for a console window to host the shell
 # Kill menu
   Make an API to kill a process by its handle
 # Shortcut manager
