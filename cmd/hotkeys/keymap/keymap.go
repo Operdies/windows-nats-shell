@@ -21,7 +21,7 @@ var (
 type action struct {
 	Nats struct {
 		Subject string
-		Payload   any
+		Payload any
 	}
 }
 type keymap struct {
@@ -200,7 +200,7 @@ func Create() *Keymap {
 	var result Keymap
 	result.activeMods = map[VKEY]bool{}
 	c := client.Default()
-	cfg, _ := c.Request.Config("hotkey-manager")
+	cfg, _ := c.Request.Config("")
 	custom, _ := shell.GetCustom[keymap](cfg)
 
 	hotkeys := make([]hotkey, 0, len(custom.Keymap))

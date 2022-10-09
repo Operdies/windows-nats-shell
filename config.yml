@@ -5,8 +5,8 @@ services:
       background:
         path: C:/Users/alexw/Documents/wallpaper.png
       shader:
-        vert: C:/Users/alexw/repos/minimalist-shell/cmd/background/shader.vert
-        frag: C:/Users/alexw/repos/minimalist-shell/cmd/background/shader.frag
+        vert: ../cmd/background/shader.vert
+        frag: ../cmd/background/shader.frag
       render:
         updaterate: 2000 # Update rate in milliseconds
         clearcolor: 423

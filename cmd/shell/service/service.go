@@ -153,11 +153,11 @@ func NewProcessJob(name string, service shell.Service) *ProcessJob {
 	s.service = &service
 	s.name = name
 	if service.AutoRestart == nil {
-		b := false 
+		b := false
 		service.AutoRestart = &b
 	}
 	if service.Enabled == nil {
-		b := true 
+		b := true
 		service.Enabled = &b
 	}
 	return &s

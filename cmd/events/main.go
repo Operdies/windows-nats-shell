@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	hookDll = syscall.MustLoadDLL("C:\\Users\\alexw\\repos\\minimalist-shell\\bin\\libhook.dll")
+	hookDll = syscall.MustLoadDLL("libhook")
 
 	shellProc    = hookDll.MustFindProc(ShellProc)
 	cbtProc      = hookDll.MustFindProc(CBTProc)
