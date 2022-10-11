@@ -2,11 +2,13 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"syscall"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 )
 
@@ -53,11 +55,25 @@ func CombineErrors(errors ...error) error {
 	return err
 }
 
-var (
-	fStdout = os.NewFile(uintptr(syscall.Stdout), "/dev/stdout")
-	fStdin  = os.NewFile(uintptr(syscall.Stdin), "/dev/stdin")
-	fStderr = os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
-)
+type NatsStdout struct {
+	subject string
+	nc      *nats.Conn
+}
+
+func CreateNatsStdout(subject string) *NatsStdout {
+	var n NatsStdout
+	n.subject = subject
+	n.nc, _ = nats.Connect(nats.DefaultURL)
+	return &n
+}
+func (n *NatsStdout) Close() {
+	n.nc.Close()
+}
+
+func (n *NatsStdout) Write(data []byte) (int, error) {
+	n.nc.Publish(n.subject, data)
+	return len(data), nil
+}
 
 func (j *ProcessJob) Start() error {
 	if j.service.Executable == "" {
@@ -69,7 +85,7 @@ func (j *ProcessJob) Start() error {
 		return fmt.Errorf("Process %s is already running.", j.name)
 	}
 	j.StartCount += 1
-	fmt.Printf("Starting %s. (%d)\n", j.name, j.StartCount)
+	log.Printf("Starting %s. (%d)\n", j.name, j.StartCount)
 
 	j.restart = *j.service.AutoRestart == true
 	prog := j.service
@@ -80,22 +96,10 @@ func (j *ProcessJob) Start() error {
 	env = append(env, ref)
 	cmd.Env = env
 	cmd.Dir = prog.WorkingDirectory
-
-	if prog.ForwardStdout {
-		cmd.Stdout = os.Stdout
-	} else {
-		cmd.Stdout = fStdout
-	}
-	if prog.ForwardStdin {
-		cmd.Stdin = os.Stdin
-	} else {
-		cmd.Stdin = fStdin
-	}
-	if prog.ForwardStderror {
-		cmd.Stderr = os.Stderr
-	} else {
-		cmd.Stderr = fStderr
-	}
+	natsStdout := CreateNatsStdout(fmt.Sprintf("Shell.%s.stdout", j.name))
+	natsStderr := CreateNatsStdout(fmt.Sprintf("Shell.%s.stderr", j.name))
+	cmd.Stdout = natsStdout
+	cmd.Stderr = natsStderr
 
 	if j.service.Visible == false {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
@@ -105,7 +109,7 @@ func (j *ProcessJob) Start() error {
 	err := cmd.Start()
 
 	if err != nil {
-		fmt.Printf("Process %s failed to start. %v\n", j.name, err.Error())
+		log.Printf("Process %s failed to start. %v\n", j.name, err.Error())
 		j.restart = false
 		return err
 	}
@@ -113,13 +117,15 @@ func (j *ProcessJob) Start() error {
 	j.cmd = cmd
 
 	go func() {
+		defer natsStdout.Close()
+		defer natsStderr.Close()
 		err := cmd.Wait()
 		ex := cmd.ProcessState.ExitCode()
 		j.cmd = nil
 		if err != nil {
-			fmt.Printf("Process %s exited. (%d: %v)\n", j.name, ex, err)
+			log.Printf("Process %s exited. (%d: %v)\n", j.name, ex, err)
 		} else {
-			fmt.Printf("Process %s exited. (%d)\n", j.name, ex)
+			log.Printf("Process %s exited. (%d)\n", j.name, ex)
 		}
 
 		if j.restart {
@@ -131,7 +137,6 @@ func (j *ProcessJob) Start() error {
 }
 
 func (j *ProcessJob) Stop() (err error) {
-	// fmt.Printf("Stop %s\n", j.name)
 	j.restart = false
 	if j.cmd == nil {
 		return fmt.Errorf("Process %s is not running.", j.name)

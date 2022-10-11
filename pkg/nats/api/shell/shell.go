@@ -53,9 +53,6 @@ type Service struct {
 	Enabled          *bool
 	AutoRestart      *bool
 	Visible          bool
-	ForwardStdout    bool
-	ForwardStderror  bool
-	ForwardStdin     bool
 	// Any environment variables that should be defined
 	Environment []string
 }

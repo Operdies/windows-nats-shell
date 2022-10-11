@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -19,7 +20,7 @@ func start(config *shell.Configuration) bool {
 	var subs []*nats.Subscription
 	var jobs map[string]*service.ProcessJob
 	quit := make(chan bool)
-	fmt.Println("Starting shell!")
+	log.Println("Starting shell!")
 
 	client, err := client.New(nats.DefaultURL, time.Second)
 	if err != nil {
@@ -54,7 +55,7 @@ func start(config *shell.Configuration) bool {
 		if ok {
 			cfg2, err := config.Reload()
 			if err != nil {
-				fmt.Printf("Error in config: %v", err)
+				log.Printf("Error in config: %v", err)
 			} else {
 				if newCfg, ok := cfg2.Services[s]; ok {
 					config.Services[s] = newCfg
@@ -71,7 +72,7 @@ func start(config *shell.Configuration) bool {
 	})
 	subs = append(subs, s)
 	s, _ = client.Subscribe.RestartShell(func() error {
-		fmt.Println("Restart Shell!")
+		log.Println("Restart Shell!")
 		quit <- true
 		return nil
 	})
@@ -132,13 +133,16 @@ func main() {
 	os.Chdir(here)
 	config := shell.LoadDefault()
 
+	shellLogger := service.CreateNatsStdout("Shell.stdout")
+	log.SetOutput(shellLogger)
+
 	for start(config) {
 		config2, err := config.Reload()
 		if err != nil {
-			fmt.Println("Error in reloaded config:", err.Error())
-			fmt.Println("Services were restarted, but no changes were made.")
+			log.Println("Error in reloaded config:", err.Error())
+			log.Println("Services were restarted, but no changes were made.")
 		} else {
-			fmt.Println("Loaded new config file.")
+			log.Println("Loaded new config file.")
 			config = config2
 		}
 	}

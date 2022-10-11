@@ -11,10 +11,6 @@ Scribblings of a madman
   about the process. GetWindows is probably still different enough
   that they can both coexist.
   Evaluate if NewProcess events are necessary
-## NATS process IO 
-  IO should just be done using nats. So the default stdout / stderr for a service will just be a byte buffer which publishes logs 
-  with the service name as a subject. Then services can be NATS agnostic
-  stdin can also be nats for that matter. 
 ## Launcher process IO 
   The launcher could also support IO streams. This should probably be a different subject though.
   StartProcess instead of LaunchProgram? Reading stdout/err should behave like streams here though, and not be published.
