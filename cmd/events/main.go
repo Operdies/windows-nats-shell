@@ -12,28 +12,24 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	// "github.com/operdies/windows-nats-shell/cmd/shell-event-publisher/hooks"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/utils/query"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 
-	// "github.com/operdies/windows-nats-shell/pkg/utils/query"
 	"gopkg.in/natefinch/npipe.v2"
 )
 
 const (
-	ShellProc    = "ShellProc"
-	CBTProc      = "CBTProc"
+	ShellProc = "ShellProc"
 	KeyboardProc = "KeyboardProc"
 )
 
 var (
 	hookDll = syscall.MustLoadDLL("libhook")
 
-	shellProc    = hookDll.MustFindProc(ShellProc)
-	cbtProc      = hookDll.MustFindProc(CBTProc)
+	shellProc = hookDll.MustFindProc(ShellProc)
 	keyboardProc = hookDll.MustFindProc(KeyboardProc)
 )
 
@@ -54,8 +50,6 @@ func publishEvent(eventType string, arguments []string) {
 
 	if eventType == "WH_SHELL" {
 		cl.Publish.WH_SHELL(shell.WhShellEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
-	} else if eventType == "WH_CBT" {
-		cl.Publish.WH_CBT(shell.WhCbtEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
 	} else if eventType == "WH_KEYBOARD" {
 		cl.Publish.WH_KEYBOARD(shell.WhKeyboardEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
 	}
@@ -99,18 +93,17 @@ func server() {
 }
 
 func listen() {
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	hook1 := winapi.SetWindowsHookExW(wintypes.WH_SHELL, shellProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
-	hook2 := winapi.SetWindowsHookExW(wintypes.WH_CBT, cbtProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
 	hook3 := winapi.SetWindowsHookExW(wintypes.WH_KEYBOARD, keyboardProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
 	go server()
 
 	defer winapi.UnhookWindowsHook(hook1)
-	defer winapi.UnhookWindowsHook(hook2)
+	// defer winapi.UnhookWindowsHook(hook2)
 	defer winapi.UnhookWindowsHook(hook3)
 
 	// Let defers run their course when a signal is received
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 }
 

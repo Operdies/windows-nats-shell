@@ -125,8 +125,8 @@ func main() {
 
 	render := make(chan bool)
 
-	_, err = nc.Subscribe.WH_CBT(func(ci shell.CBTEventInfo) {
-		if ci.CBTCode == shell.HCBT_SETFOCUS {
+	_, err = nc.Subscribe.WH_SHELL(func(ci shell.ShellEventInfo) {
+		if ci.ShellCode == shell.HSHELL_ACTIVATESHELLWINDOW {
 			windowhelper.SetBottomMost(hwnd)
 			render <- true
 		}

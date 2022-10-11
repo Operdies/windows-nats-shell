@@ -110,17 +110,6 @@ func (client Subscriber) WH_SHELL(callback func(shell.ShellEventInfo)) (*nats.Su
 	})
 }
 
-func (client Publisher) WH_CBT(evt shell.CBTEventInfo) {
-	client.nc.Publish(shell.CBTEvent, utils.EncodeAny(evt))
-}
-
-func (client Subscriber) WH_CBT(callback func(shell.CBTEventInfo)) (*nats.Subscription, error) {
-	return client.nc.Subscribe(shell.CBTEvent, func(msg *nats.Msg) {
-		evt := utils.DecodeAny[shell.CBTEventInfo](msg.Data)
-		callback(evt)
-	})
-}
-
 func (client Publisher) WH_KEYBOARD(evt shell.KeyboardEventInfo) {
 	client.nc.Publish(shell.KeyboardEvent, utils.EncodeAny(evt))
 }

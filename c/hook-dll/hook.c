@@ -30,15 +30,6 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam){
   return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
-LRESULT CALLBACK CBTProc(int nCode, WPARAM wParam, LPARAM lParam) {
-  if (nCode >= 0){
-    char buf[40];
-    int len = sprintf(buf, "WH_CBT,%d,%llu,%lld\n", nCode, wParam, lParam);
-    WriteToPipe(buf, len);
-  }
-  return CallNextHookEx(NULL, nCode, wParam, lParam);
-}
-
 LRESULT CALLBACK ShellProc(int nCode, WPARAM wParam, LPARAM lParam) {
   if (nCode >= 0){
     char buf[40];

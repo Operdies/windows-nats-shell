@@ -25,7 +25,6 @@ type (
 	HWINEVENTHOOK HANDLE
 	PBYTE         []BYTE
 	HOOKPROC      func(int, WPARAM, LPARAM) LRESULT
-	CBTProc       HOOKPROC
 	WNDENUMPROC   func(HWND, LPARAM) LRESULT
 	WINEVENTPROC  func(HWINEVENTHOOK, DWORD, HWND, LONG, LONG, DWORD, DWORD) uintptr
 
@@ -57,7 +56,6 @@ const (
 	WH_KEYBOARD    WH_EVENTTYPE = 2
 	WH_KEYBOARD_LL              = 13
 	WH_CALLWNDPROC              = 4
-	WH_CBT                      = 5
 	WH_SHELL                    = 10
 )
 

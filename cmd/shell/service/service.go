@@ -63,7 +63,9 @@ func (j *ProcessJob) Start() error {
 	if j.service.Executable == "" {
 		return fmt.Errorf("Service %s has no configured executable.", j.name)
 	}
-	// fmt.Printf("Start %s\n", j.name)
+	if *j.service.Enabled == false {
+		return nil
+	}
 
 	if j.cmd != nil {
 		return fmt.Errorf("Process %s is already running.", j.name)

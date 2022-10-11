@@ -51,6 +51,7 @@ Scribblings of a madman
   It would make sense if Microsoft made the nCode value unique between the different event types. 
   It would also make sense if they designed them such that e.g. the range `x < nCode < y` codes all belong to event `z`
   Investigate if these assumptions are accuracte and rewrite callbacks.
+  Update: Though there are 2^32 integers available, microsoft decided to overlap ncodes.
 
   Bonus: Check if the callback can be done in GO to skip the named pipe business.
   I read a post about some GO C exports that sort of looked like it would be possible. Then the named pipes can 

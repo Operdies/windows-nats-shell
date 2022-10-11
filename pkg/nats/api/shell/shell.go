@@ -33,8 +33,6 @@ const (
 	QuitShell = "Shell.Quit"
 	// Some shell event happened
 	ShellEvent = "Shell.ShellEvent"
-	// Some CBT happened
-	CBTEvent = "Shell.CBTEvent"
 	// Some kyboard event happened
 	KeyboardEvent = "Shell.KeyboardEvent"
 )
@@ -75,13 +73,6 @@ type Configuration struct {
 	Services map[string]Service
 }
 
-type CBTEventInfo struct {
-	Event   string
-	CBTCode WM_CBT_CODE
-	WParam  uint64
-	LParam  uint64
-}
-
 type ShellEventInfo struct {
 	Event     string
 	ShellCode WM_SHELL_CODE
@@ -114,20 +105,6 @@ const (
 	HSHELL_WINDOWREPLACED                    = 13
 )
 
-type WM_CBT_CODE = int
-
-const (
-	HCBT_ACTIVATE     WM_CBT_CODE = 5
-	HCBT_CLICKSKIPPED             = 6
-	HCBT_CREATEWND                = 3
-	HCBT_DESTROYWND               = 4
-	HCBT_KEYSKIPPED               = 7
-	HCBT_MINMAX                   = 1
-	HCBT_MOVESIZE                 = 0
-	HCBT_QS                       = 2
-	HCBT_SETFOCUS                 = 9
-	HCBT_SYSCOMMAND               = 8
-)
 
 func WhShellEvent(nCode WM_SHELL_CODE, wParam uintptr, lParam uintptr) ShellEventInfo {
 	var mapping = map[int]string{
@@ -150,28 +127,6 @@ func WhShellEvent(nCode WM_SHELL_CODE, wParam uintptr, lParam uintptr) ShellEven
 	}
 
 	var e = ShellEventInfo{Event: evt, ShellCode: nCode, WParam: uint64(wParam), LParam: uint64(lParam)}
-	return e
-}
-
-func WhCbtEvent(nCode WM_CBT_CODE, wParam uintptr, lParam uintptr) CBTEventInfo {
-	var mapping = map[int]string{
-		HCBT_ACTIVATE:     "HCBT_ACTIVATE",
-		HCBT_CLICKSKIPPED: "HCBT_CLICKSKIPPED",
-		HCBT_CREATEWND:    "HCBT_CREATEWND",
-		HCBT_DESTROYWND:   "HCBT_DESTROYWND",
-		HCBT_KEYSKIPPED:   "HCBT_KEYSKIPPED",
-		HCBT_MINMAX:       "HCBT_MINMAX",
-		HCBT_MOVESIZE:     "HCBT_MOVESIZE",
-		HCBT_QS:           "HCBT_QS",
-		HCBT_SETFOCUS:     "HCBT_SETFOCUS",
-		HCBT_SYSCOMMAND:   "HCBT_SYSCOMMAND",
-	}
-	evt, ok := mapping[nCode]
-	if !ok {
-		evt = "UNKOWN_EVENT"
-	}
-
-	var e = CBTEventInfo{Event: evt, CBTCode: nCode, WParam: uint64(wParam), LParam: uint64(lParam)}
 	return e
 }
 
