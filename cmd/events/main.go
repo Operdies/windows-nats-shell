@@ -1,36 +1,32 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"net"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 	"syscall"
-	"time"
+	"unsafe"
 
-	"github.com/nats-io/nats.go"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
-	"github.com/operdies/windows-nats-shell/pkg/utils/query"
-	"github.com/operdies/windows-nats-shell/pkg/winapi"
-	"github.com/operdies/windows-nats-shell/pkg/wintypes"
-
-	"gopkg.in/natefinch/npipe.v2"
-)
-
-const (
-	ShellProc = "ShellProc"
-	KeyboardProc = "KeyboardProc"
 )
 
 var (
-	hookDll = syscall.MustLoadDLL("libhook")
+	user32 = syscall.MustLoadDLL("user32.dll")
 
-	shellProc = hookDll.MustFindProc(ShellProc)
-	keyboardProc = hookDll.MustFindProc(KeyboardProc)
+	systemParametersInfoA = user32.MustFindProc("SystemParametersInfoA")
+)
+
+type tagMINIMIZEDMETRICS struct {
+	cbSize   uint32
+	iWidth   int32
+	iHorzGap int32
+	iVertGap int32
+	iArrange int32
+}
+
+const (
+	ARW_HIDE                = 0x0008
+	SPI_SETMINIMIZEDMETRICS = 0x002C
 )
 
 var (
@@ -38,73 +34,39 @@ var (
 )
 
 func init() {
-	cl, _ = client.New(nats.DefaultURL, time.Second)
+	cl = client.Default()
 }
 
-func publishEvent(eventType string, arguments []string) {
-	numbers := query.Select(arguments, func(n string) uint64 {
-		r, _ := strconv.ParseUint(n, 10, 64)
-		return r
-	})
-	nCode, wParam, lParam := numbers[0], numbers[1], numbers[2]
+type eventType = int
 
-	if eventType == "WH_SHELL" {
+const (
+	WH_SHELL    = 1
+	WH_KEYBOARD = 2
+)
+
+func publishEvent(evt eventType, nCode, wParam, lParam int) {
+	if evt == WH_SHELL {
 		cl.Publish.WH_SHELL(shell.WhShellEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
-	} else if eventType == "WH_KEYBOARD" {
+	} else if evt == WH_KEYBOARD {
 		cl.Publish.WH_KEYBOARD(shell.WhKeyboardEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
 	}
 }
 
-func handleConn(conn net.Conn, id int) {
-	defer conn.Close()
-	s := bufio.NewScanner(conn)
-	for s.Scan() {
-		msg := strings.Split(s.Text(), ",")
-		publishEvent(msg[0], msg[1:])
-	}
-}
-
-func connectionListener(ln *npipe.PipeListener, id int) {
-	for {
-		conn, err := ln.Accept()
-		go func() {
-			if err != nil {
-				fmt.Printf("err: %v\n", err.Error())
-			} else {
-				handleConn(conn, id)
-			}
-		}()
-	}
-}
-
-func server() {
-	ln, err := npipe.Listen(`\\.\pipe\shellpipe`)
-	if err != nil {
-		panic(err)
-	}
-
-	// Start several concurrent connection listeners
-	// This is to counter the case when a new connection is established
-	// before the loop rolls around to accept new connections
-	for i := 0; i < 5; i++ {
-		go connectionListener(ln, i)
-	}
-	select {}
-}
-
 func listen() {
-	hook1 := winapi.SetWindowsHookExW(wintypes.WH_SHELL, shellProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
-	hook3 := winapi.SetWindowsHookExW(wintypes.WH_KEYBOARD, keyboardProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
-	go server()
-
-	defer winapi.UnhookWindowsHook(hook1)
-	// defer winapi.UnhookWindowsHook(hook2)
-	defer winapi.UnhookWindowsHook(hook3)
-
 	// Let defers run their course when a signal is received
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
+}
+
+func registerAsDefautlShell() {
+	var min tagMINIMIZEDMETRICS
+	min.iArrange = ARW_HIDE
+	min.cbSize = uint32(unsafe.Sizeof(min))
+
+	minptr := unsafe.Pointer(&min)
+
+	systemParametersInfoA.Call(SPI_SETMINIMIZEDMETRICS, 0, uintptr(minptr), 0)
 }
 
 func main() {
