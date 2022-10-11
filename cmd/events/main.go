@@ -98,19 +98,38 @@ func server() {
 	select {}
 }
 
+type config struct {
+	KeyboardEvents bool
+	CBTEvents      bool
+	ShellEvents    bool
+}
+
 func listen() {
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	hook1 := winapi.SetWindowsHookExW(wintypes.WH_SHELL, shellProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
-	hook2 := winapi.SetWindowsHookExW(wintypes.WH_CBT, cbtProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
-	hook3 := winapi.SetWindowsHookExW(wintypes.WH_KEYBOARD, keyboardProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
+	nc := client.Default()
+	cfg, _ := nc.Request.Config("")
+	custom, _ := shell.GetCustom[config](cfg)
+
+	if custom.ShellEvents {
+		fmt.Println("Registering shell hook")
+		hook1 := winapi.SetWindowsHookExW(wintypes.WH_SHELL, shellProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
+		defer winapi.UnhookWindowsHook(hook1)
+	}
+	if custom.CBTEvents {
+		fmt.Println("Registering CBT hook")
+		hook2 := winapi.SetWindowsHookExW(wintypes.WH_CBT, cbtProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
+		defer winapi.UnhookWindowsHook(hook2)
+	}
+	if custom.KeyboardEvents {
+		fmt.Println("Registering keyboard hook")
+		hook3 := winapi.SetWindowsHookExW(wintypes.WH_KEYBOARD, keyboardProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
+		defer winapi.UnhookWindowsHook(hook3)
+	}
+
 	go server()
 
-	defer winapi.UnhookWindowsHook(hook1)
-	defer winapi.UnhookWindowsHook(hook2)
-	defer winapi.UnhookWindowsHook(hook3)
-
 	// Let defers run their course when a signal is received
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 }
 

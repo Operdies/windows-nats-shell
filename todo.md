@@ -29,7 +29,6 @@ Scribblings of a madman
   I'm not sure what the best way to tackle this is. Do all keyboard listeners implement 
   throttling, or does the event publisher throttle keys?
   -- Should there be a different subject for "give me real keystrokes" and "give me all key events"?
-  
 ## Background 
   API for posting data (images or text) to the background. TBD: pre-configured zones or defined per request / client?
 ## Window manager 
@@ -42,6 +41,17 @@ Scribblings of a madman
   Investigate what integrations exist / are possible
 ## Rofi but for windows
   Would make the shell usable without a linux driver. The shortcut manager needs to support input/output. Then the rofi implementation can respond using nats 
+## Custom configs 
+  Currently, the workaround for a service to have a custom config is the custom key, and a helper method to remarshal the config.
+  We can avoid the `custom` key if the `Config` endpoint returns the entire config (and not just the part the shell understands)
+  Then the requesting service should say `client.GetConfig[MyConfig](requester)`, and define `MyConfig` like 
+  ```go 
+  type MyConfig struct {
+		  base shell.Service 
+		  MySettings string
+	  }
+  ```
+  This would be much simpler
 ## C callbacks
   The C callbacks are identical except for a prefix.
   It would make sense if Microsoft made the nCode value unique between the different event types. 
