@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
@@ -110,22 +111,19 @@ func (client Subscriber) WH_SHELL(callback func(shell.ShellEventInfo)) (*nats.Su
 	})
 }
 
-func (client Publisher) WH_CBT(evt shell.CBTEventInfo) {
-	client.nc.Publish(shell.CBTEvent, utils.EncodeAny(evt))
-}
-
-func (client Subscriber) WH_CBT(callback func(shell.CBTEventInfo)) (*nats.Subscription, error) {
-	return client.nc.Subscribe(shell.CBTEvent, func(msg *nats.Msg) {
-		evt := utils.DecodeAny[shell.CBTEventInfo](msg.Data)
-		callback(evt)
-	})
-}
-
 func (client Publisher) WH_KEYBOARD(evt shell.KeyboardEventInfo) {
 	client.nc.Publish(shell.KeyboardEvent, utils.EncodeAny(evt))
 }
 
-func (client Subscriber) WH_KEYBOARD(callback func(shell.KeyboardEventInfo)) (*nats.Subscription, error) {
+func (client Requester) WH_KEYBOARD(evt shell.KeyboardEventInfo) bool {
+	response, err := client.nc.Request(shell.KeyboardEvent, utils.EncodeAny(evt), time.Millisecond)
+	if err != nil {
+		return false
+	}
+	return utils.DecodeAny[bool](response.Data)
+}
+
+func (client Subscriber) WH_KEYBOARD(callback func(shell.KeyboardEventInfo) bool) (*nats.Subscription, error) {
 	return client.nc.Subscribe(shell.KeyboardEvent, func(msg *nats.Msg) {
 		evt := utils.DecodeAny[shell.KeyboardEventInfo](msg.Data)
 		callback(evt)

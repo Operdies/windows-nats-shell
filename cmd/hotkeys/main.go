@@ -1,31 +1,34 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/operdies/windows-nats-shell/cmd/hotkeys/keymap"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 )
 
-// Virtual keycodes
-type VKEY = int
+func dumpTree(mods []uint32, bt *keymap.BindingTree) {
+	for m, b := range bt.Subtrees {
+		mods2 := append(mods, m)
+		dumpTree(mods2, b)
 
-const (
-	BACKSPACE VKEY = 8
-	WIN            = 91
-	A              = 65
-	B              = 66
-	SHIFT          = 16
-	ALT            = 18
-	CTRL           = 17
-)
+		if b.HasAction {
+			fmt.Printf("Binding: %+v\nActions: %+v\n", mods2, b.Action)
+		}
+	}
+}
 
 func main() {
 	c := client.Default()
 	km := keymap.Create()
+	dumpTree(nil, km.Bindings)
 
 	// Maybe this needs to be a WindowsHookEvent callback in the future.
 	// For simplicity, let's stick to subscribing for now.
 	// A windows hook event would allow us to avoid propagating handled events
-	c.Subscribe.WH_KEYBOARD(func(kei shell.KeyboardEventInfo) { km.ProcessEvent(kei) })
+	c.Subscribe.WH_KEYBOARD(func(kei shell.KeyboardEventInfo) bool {
+		return km.ProcessEvent(kei)
+	})
 	select {}
 }

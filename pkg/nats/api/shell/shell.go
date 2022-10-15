@@ -34,8 +34,6 @@ const (
 	QuitShell = "Shell.Quit"
 	// Some shell event happened
 	ShellEvent = "Shell.ShellEvent"
-	// Some CBT happened
-	CBTEvent = "Shell.CBTEvent"
 	// Some kyboard event happened
 	KeyboardEvent = "Shell.KeyboardEvent"
 )
@@ -73,13 +71,6 @@ type Configuration struct {
 	Services map[string]Service
 }
 
-type CBTEventInfo struct {
-	Event   string
-	CBTCode WM_CBT_CODE
-	WParam  uint64
-	LParam  uint64
-}
-
 type ShellEventInfo struct {
 	Event     string
 	ShellCode WM_SHELL_CODE
@@ -112,21 +103,6 @@ const (
 	HSHELL_WINDOWREPLACED                    = 13
 )
 
-type WM_CBT_CODE = int
-
-const (
-	HCBT_ACTIVATE     WM_CBT_CODE = 5
-	HCBT_CLICKSKIPPED             = 6
-	HCBT_CREATEWND                = 3
-	HCBT_DESTROYWND               = 4
-	HCBT_KEYSKIPPED               = 7
-	HCBT_MINMAX                   = 1
-	HCBT_MOVESIZE                 = 0
-	HCBT_QS                       = 2
-	HCBT_SETFOCUS                 = 9
-	HCBT_SYSCOMMAND               = 8
-)
-
 func WhShellEvent(nCode WM_SHELL_CODE, wParam uintptr, lParam uintptr) ShellEventInfo {
 	var mapping = map[int]string{
 		HSHELL_ACCESSIBILITYSTATE:  "HSHELL_ACCESSIBILITYSTATE",
@@ -151,37 +127,15 @@ func WhShellEvent(nCode WM_SHELL_CODE, wParam uintptr, lParam uintptr) ShellEven
 	return e
 }
 
-func WhCbtEvent(nCode WM_CBT_CODE, wParam uintptr, lParam uintptr) CBTEventInfo {
-	var mapping = map[int]string{
-		HCBT_ACTIVATE:     "HCBT_ACTIVATE",
-		HCBT_CLICKSKIPPED: "HCBT_CLICKSKIPPED",
-		HCBT_CREATEWND:    "HCBT_CREATEWND",
-		HCBT_DESTROYWND:   "HCBT_DESTROYWND",
-		HCBT_KEYSKIPPED:   "HCBT_KEYSKIPPED",
-		HCBT_MINMAX:       "HCBT_MINMAX",
-		HCBT_MOVESIZE:     "HCBT_MOVESIZE",
-		HCBT_QS:           "HCBT_QS",
-		HCBT_SETFOCUS:     "HCBT_SETFOCUS",
-		HCBT_SYSCOMMAND:   "HCBT_SYSCOMMAND",
-	}
-	evt, ok := mapping[nCode]
-	if !ok {
-		evt = "UNKOWN_EVENT"
-	}
-
-	var e = CBTEventInfo{Event: evt, CBTCode: nCode, WParam: uint64(wParam), LParam: uint64(lParam)}
-	return e
-}
-
 type KeyboardEventInfo struct {
 	KeyboardEventCode KeyEventCode
-	VirtualKeyCode    uint64
+	ScanCode          uint64
 	// The repeat count. The value is the number of times the keystroke is repeated as a result of the user's holding down the key.
 	// bit 0-15
 	RepeatCount uint64
 	// The scan code. The value depends on the OEM.
 	// bit 16-23
-	ScanCode uint64
+	VirtualKeyCode uint64
 	// Indicates whether the key is an extended key, such as a function key or a key on the numeric keypad. The value is 1 if the key is an extended key; otherwise, it is 0.
 	// bit 24
 	IsExtended bool
@@ -205,12 +159,32 @@ func bitRange(number uint64, start, end uint8) uint64 {
 	return n & mask
 }
 
+type KBDLLHOOKSTRUCT struct {
+	VkCode      wintypes.DWORD
+	ScanCode    wintypes.DWORD
+	Flags       wintypes.DWORD
+	Time        wintypes.DWORD
+	DwExtraInfo uintptr
+}
+
+func WhKeyboardLlEvent(nCode KeyEventCode, info KBDLLHOOKSTRUCT) KeyboardEventInfo {
+	var evt KeyboardEventInfo
+	evt.KeyboardEventCode = nCode
+	evt.ScanCode = uint64(info.ScanCode)
+	evt.RepeatCount = 0 //
+	evt.VirtualKeyCode = uint64(info.VkCode)
+	evt.IsExtended = bitRange(uint64(info.Flags), 0, 0) == 1
+	evt.ContextCode = bitRange(uint64(info.Flags), 5, 5) == 1
+	evt.TransitionState = bitRange(uint64(info.Flags), 7, 7) == 1
+	return evt
+}
+
 func WhKeyboardEvent(nCode KeyEventCode, wParam wintypes.WPARAM, lParam wintypes.LPARAM) KeyboardEventInfo {
 	evt := KeyboardEventInfo{}
 	evt.KeyboardEventCode = nCode
-	evt.VirtualKeyCode = uint64(wParam)
+	evt.ScanCode = uint64(wParam)
 	evt.RepeatCount = bitRange(uint64(lParam), 0, 15)
-	evt.ScanCode = bitRange(uint64(lParam), 16, 23)
+	evt.VirtualKeyCode = bitRange(uint64(lParam), 16, 23)
 	evt.IsExtended = bitRange(uint64(lParam), 24, 24) == 1
 	evt.ContextCode = bitRange(uint64(lParam), 29, 29) == 1
 	evt.PreviousKeyState = bitRange(uint64(lParam), 30, 30) == 1

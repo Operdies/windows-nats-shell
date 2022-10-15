@@ -4,45 +4,89 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"os"
-	"os/signal"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+	"unsafe"
 
+	"github.com/natefinch/npipe"
 	"github.com/nats-io/nats.go"
-	// "github.com/operdies/windows-nats-shell/cmd/shell-event-publisher/hooks"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/utils/query"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
-
-	// "github.com/operdies/windows-nats-shell/pkg/utils/query"
-	"gopkg.in/natefinch/npipe.v2"
 )
+
+var (
+	user32                = syscall.MustLoadDLL("user32.dll")
+	systemParametersInfoA = user32.MustFindProc("SystemParametersInfoA")
+
+	hookDll      = syscall.MustLoadDLL("libhook")
+	shellProc    = hookDll.MustFindProc("ShellProc")
+	keyboardProc = hookDll.MustFindProc("KeyboardProc")
+)
+
+type tagMINIMIZEDMETRICS struct {
+	cbSize   uint32
+	iWidth   int32
+	iHorzGap int32
+	iVertGap int32
+	iArrange int32
+}
 
 const (
-	ShellProc    = "ShellProc"
-	CBTProc      = "CBTProc"
-	KeyboardProc = "KeyboardProc"
+	ARW_HIDE                = 0x0008
+	SPI_SETMINIMIZEDMETRICS = 0x002C
 )
 
-var (
-	hookDll = syscall.MustLoadDLL("libhook")
+type config struct {
+	KeyboardEvents   bool
+	KeyboardEventsLL bool
+	ShellEvents      bool
+}
 
-	shellProc    = hookDll.MustFindProc(ShellProc)
-	cbtProc      = hookDll.MustFindProc(CBTProc)
-	keyboardProc = hookDll.MustFindProc(KeyboardProc)
-)
+func registerShell() {
+	var min tagMINIMIZEDMETRICS
+	min.iArrange = ARW_HIDE
+	min.cbSize = uint32(unsafe.Sizeof(min))
 
-var (
-	cl client.Client
-)
+	minptr := unsafe.Pointer(&min)
+
+	// This call is required in order to receive shell events.
+	// It also hides minimized windows so there is no pseudo-taskbar
+	systemParametersInfoA.Call(SPI_SETMINIMIZEDMETRICS, 0, uintptr(minptr), 0)
+}
+
+func ShellHookHandler(c chan shell.ShellEventInfo) wintypes.HOOKPROC {
+	return func(code int32, wParam wintypes.WPARAM, lParam wintypes.LPARAM) wintypes.LRESULT {
+		if code > 0 {
+
+		}
+		return winapi.CallNextHookEx(0, int(code), wParam, lParam)
+	}
+}
+
+func keyboardHandler(code int32, wParam wintypes.WPARAM, lParam wintypes.LPARAM) wintypes.LRESULT {
+	if code == 0 && lParam != 0 {
+		evt := *(*shell.KBDLLHOOKSTRUCT)(unsafe.Pointer(lParam))
+		evt2 := shell.WhKeyboardLlEvent(int(code), evt)
+		handled := nc.Request.WH_KEYBOARD(evt2)
+		//
+		if handled {
+			// This doesn't actually intercept the event for other applications :(
+			return wintypes.LRESULT(1)
+		}
+	}
+
+	return winapi.CallNextHookEx(0, int(code), wParam, lParam)
+}
+
+var nc client.Client
 
 func init() {
-	cl, _ = client.New(nats.DefaultURL, time.Second)
+	nc, _ = client.New(nats.DefaultURL, time.Second)
 }
 
 func publishEvent(eventType string, arguments []string) {
@@ -53,11 +97,9 @@ func publishEvent(eventType string, arguments []string) {
 	nCode, wParam, lParam := numbers[0], numbers[1], numbers[2]
 
 	if eventType == "WH_SHELL" {
-		cl.Publish.WH_SHELL(shell.WhShellEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
-	} else if eventType == "WH_CBT" {
-		cl.Publish.WH_CBT(shell.WhCbtEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
+		nc.Publish.WH_SHELL(shell.WhShellEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
 	} else if eventType == "WH_KEYBOARD" {
-		cl.Publish.WH_KEYBOARD(shell.WhKeyboardEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
+		nc.Publish.WH_KEYBOARD(shell.WhKeyboardEvent(int(nCode), wintypes.WPARAM(wParam), wintypes.LPARAM(lParam)))
 	}
 }
 
@@ -95,44 +137,34 @@ func server() {
 	for i := 0; i < 5; i++ {
 		go connectionListener(ln, i)
 	}
-	select {}
-}
-
-type config struct {
-	KeyboardEvents bool
-	CBTEvents      bool
-	ShellEvents    bool
-}
-
-func listen() {
-	nc := client.Default()
-	cfg, _ := nc.Request.Config("")
-	custom, _ := shell.GetCustom[config](cfg)
-
-	if custom.ShellEvents {
-		fmt.Println("Registering shell hook")
-		hook1 := winapi.SetWindowsHookExW(wintypes.WH_SHELL, shellProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
-		defer winapi.UnhookWindowsHook(hook1)
-	}
-	if custom.CBTEvents {
-		fmt.Println("Registering CBT hook")
-		hook2 := winapi.SetWindowsHookExW(wintypes.WH_CBT, cbtProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
-		defer winapi.UnhookWindowsHook(hook2)
-	}
-	if custom.KeyboardEvents {
-		fmt.Println("Registering keyboard hook")
-		hook3 := winapi.SetWindowsHookExW(wintypes.WH_KEYBOARD, keyboardProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
-		defer winapi.UnhookWindowsHook(hook3)
-	}
-
-	go server()
-
-	// Let defers run their course when a signal is received
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	<-c
 }
 
 func main() {
-	listen()
+	cfg, _ := nc.Request.Config("")
+	custom, _ := shell.GetCustom[config](cfg)
+
+	registerShell()
+
+	if custom.ShellEvents {
+		hook := winapi.SetWindowsHookExW(wintypes.WH_SHELL, shellProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
+		defer winapi.UnhookWindowsHookEx(hook)
+		go server()
+	}
+
+	if custom.KeyboardEventsLL {
+		callback := syscall.NewCallback(keyboardHandler)
+		hook := winapi.SetWindowsHookExW(wintypes.WH_KEYBOARD_LL, callback, 0, 0)
+		defer winapi.UnhookWindowsHookEx(hook)
+		// Indefinitely process events
+		// Otherwise, KeyboardEventsLl won't fire
+		var msg *wintypes.MSG
+		for {
+			result := winapi.GetMessage(&msg, 0, 0, 0)
+			// Ignore any errors
+			if result > 0 {
+				winapi.TranslateMessage(&msg)
+				winapi.DispatchMessageW(&msg)
+			}
+		}
+	}
 }

@@ -111,66 +111,89 @@ func ParseMod(parts []string) hotkey {
 	return hotkey{mods: mods}
 }
 
-func unleash(m *BindingTree) {
-	nc, _ := nats.Connect(nats.DefaultURL)
-	defer nc.Close()
-	for i, act := range m.Action {
-		fmt.Printf("%d) Unleash: %+v\n", i, act.Nats)
-		msg := utils.EncodeAny(act.Nats.Payload)
-		fmt.Printf("With payload:\n%v\n", string(msg))
-		nc.Publish(act.Nats.Subject, msg)
+var (
+	nc *nats.Conn
+)
+
+func init() {
+	var err error
+	nc, err = nats.Connect(nats.DefaultURL)
+	if err != nil {
+		panic(err)
 	}
 }
 
-func (k *Keymap) ProcessEvent(kei shell.KeyboardEventInfo) {
-	isPress := kei.PreviousKeyState == false
-	isRelease := kei.PreviousKeyState && kei.TransitionState
-
-	// Holds aren't supported.
-	// Can they be used in any meaningful way?
-	// It might make sense to fire a "VolumeUp" keybind on every repeat..
-	if !isPress && !isRelease {
-		return
+func unleash(m *BindingTree) {
+	for i, act := range m.Action {
+		msg := utils.EncodeAny(act.Nats.Payload)
+		nc.Publish(act.Nats.Subject, msg)
+		fmt.Printf("%d) Unleash: %+v\nWith payload:\n%v\n", i, act.Nats, string(msg))
 	}
+}
+
+func (k *Keymap) ProcessEvent(kei shell.KeyboardEventInfo) bool {
+	// We can't differentiate presses and holds from the event info.
+	// But we know it's a hold if the key is already mapped in activeMods
+	keyDown := kei.TransitionState == false
 
 	// Update the modifier state if the key is a modifier
 	vkey := VKEY(kei.VirtualKeyCode)
 	// Clear the keymap when escape is pressed
 	if vkey == VK_ESCAPE {
 		k.activeMods = map[VKEY]bool{}
-		return
+		return false
 	}
-	k.activeMods[vkey] = isPress
 
-	// Let's only ever fire events when keys are released
-	if !isRelease {
-		return
+	var isPress, isRelease bool
+
+	previousState, ok := k.activeMods[vkey]
+	// If the value was not in the map, it should be considered 'false'
+	previousState = ok && previousState
+	isRelease = previousState && !keyDown
+	isPress = !previousState && keyDown
+
+	// Holds aren't supported.
+	// Can they be used in any meaningful way?
+	// It might make sense to fire a "VolumeUp" keybind on every repeat..
+	if !isPress && !isRelease {
+		return false
+	}
+
+	if isPress || isRelease {
+		k.activeMods[vkey] = isPress
 	}
 
 	// Traverse the configured bindings to see if there is an exact match
-	route := make([]uint32, 0, len(k.activeMods))
+	route := make([]uint32, 0, len(k.activeMods)+1)
 	for m, v := range k.activeMods {
 		if v {
 			route = append(route, uint32(m))
 		}
 	}
-	route = append(route, uint32(kei.VirtualKeyCode))
+	route = append(route, uint32(vkey))
 
 	sortMods(route)
 
+	fmt.Printf("route: %+v\n", route)
+
 	bmap := k.Bindings
 	for _, m := range route {
-		var submap *BindingTree
-		var ok bool
-		if submap, ok = bmap.Subtrees[m]; !ok {
+		submap, ok := bmap.Subtrees[m]
+		if submap == nil || ok == false {
 			// No binding here
 			break
 		}
 		bmap = submap
 	}
+	fmt.Printf("bmap: %+v\n", bmap.Subtrees)
 	if bmap.HasAction {
-		unleash(bmap)
+		// Let's only ever fire events when keys are released
+		if isRelease {
+			go unleash(bmap)
+		}
+		return true
 	}
+	return false
 }
 
 func buildTree(keys []hotkey) *BindingTree {
@@ -258,14 +281,20 @@ var (
 		"del":         VK_DELETE,
 		"delete":      VK_DELETE,
 
-		"shift":   VK_SHIFT,
-		"ctrl":    VK_CONTROL,
-		"control": VK_CONTROL,
-		"alt":     VK_MENU,
-		"menu":    VK_MENU,
-		"win":     VK_LWIN,
-		"lwin":    VK_LWIN,
-		"rwin":    VK_RWIN,
+		"shift":    VK_LSHIFT,
+		"lshift":   VK_LSHIFT,
+		"rshift":   VK_RSHIFT,
+		"lctrl":    VK_LCONTROL,
+		"ctrl":     VK_LCONTROL,
+		"control":  VK_LCONTROL,
+		"lcontrol": VK_LCONTROL,
+		"rctrl":    VK_RCONTROL,
+		"rcontrol": VK_RCONTROL,
+		"alt":      VK_LMENU,
+		"menu":     VK_LMENU,
+		"win":      VK_LWIN,
+		"lwin":     VK_LWIN,
+		"rwin":     VK_RWIN,
 
 		"num0": VK_NUMPAD0,
 		"num1": VK_NUMPAD1,
@@ -353,4 +382,11 @@ const (
 	VK_F10      = 0x79
 	VK_F11      = 0x7a
 	VK_F12      = 0x7b
+
+	VK_LSHIFT   = 0xA0
+	VK_RSHIFT   = 0xA1
+	VK_LCONTROL = 0xA2
+	VK_RCONTROL = 0xA3
+	VK_LMENU    = 0xA4
+	VK_RMENU    = 0xA5
 )

@@ -14,28 +14,27 @@ services:
   events:
     executable: ./events.exe
     custom:
-      keyboardevents: false 
-      shellevents: false
-      cbtevents: true
+      keyboardeventsll: true
+      shellevents: true
   driver:
     executable: ./driver.exe
     custom:
       launcher:
         includesystempath: true
         watchsystempath: true
-        extensions: [ .exe, .lnk, .bat, .ps1, .url, .png, .jpg, .gif]
+        extensions: [.exe, .lnk, .bat, .ps1, .url, .png, .jpg, .gif]
         sources:
           - path: C:/Users/alexw/Desktop
-            recursive: true 
+            recursive: true
             watch: true
           - path: C:/Users/alexw/scripts
-            recursive: true 
+            recursive: true
             watch: true
-          - path: "C:/Users/alexw/AppData/Roaming/Microsoft/Windows/Start Menu/"
-            recursive: true 
+          - path: 'C:/Users/alexw/AppData/Roaming/Microsoft/Windows/Start Menu/'
+            recursive: true
             watch: true
-          - path: "C:/ProgramData/Microsoft/Windows/Start Menu/"
-            recursive: true 
+          - path: 'C:/ProgramData/Microsoft/Windows/Start Menu/'
+            recursive: true
             watch: true
   hotkeys:
     executable: ./hotkeys.exe
@@ -46,17 +45,12 @@ services:
             - nats:
                 subject: Shell.Restart
         - keys: ctrl+shift+p
-          actions: 
-            - nats: 
+          actions:
+            - nats:
                 subject: System.LaunchProgram
                 payload: pwsh.exe
         - keys: ctrl+alt+shift+p
-          actions: 
-            - nats: 
+          actions:
+            - nats:
                 subject: System.LaunchProgramAsAdmin
                 payload: pwsh.exe
-        - keys: pause 
-          actions: 
-            - nats:
-                subject: System.LaunchProgram 
-                payload: Google Chrome.lnk

@@ -59,22 +59,21 @@ func ListenIndefinitely() {
 	batchedPublish := utils.Batcher(func() { client.Publish.WindowsUpdated(winapi.GetVisibleWindows()) },
 		time.Millisecond*100, time.Millisecond*500)
 
-	client.Subscribe.WH_CBT(func(e shell.CBTEventInfo) {
-		watched := map[shell.WM_CBT_CODE]bool{
-			shell.HCBT_ACTIVATE:   true,
-			shell.HCBT_CREATEWND:  true,
-			shell.HCBT_DESTROYWND: true,
-			shell.HCBT_SETFOCUS:   true,
+	client.Subscribe.WH_SHELL(func(e shell.ShellEventInfo) {
+		watched := map[shell.WM_SHELL_CODE]bool{
+			shell.HSHELL_WINDOWACTIVATED:     true,
+			shell.HSHELL_WINDOWCREATED:       true,
+			shell.HSHELL_WINDOWDESTROYED:     true,
+			shell.HSHELL_WINDOWREPLACED:      true,
+			shell.HSHELL_ACTIVATESHELLWINDOW: true,
 		}
-		if v, ok := watched[e.CBTCode]; v && ok {
+		if v, ok := watched[e.ShellCode]; v && ok {
 			// When CREATEWND and DESTROYWND is received, the window operation
 			// has been posted, but not completed. Wait a bit before publishing
-			if e.CBTCode == shell.HCBT_DESTROYWND || e.CBTCode == shell.HCBT_CREATEWND {
-				time.Sleep(time.Millisecond * 100)
-			}
 			batchedPublish()
 		}
 	})
+
 	client.Subscribe.GetWindows(winapi.GetVisibleWindows)
 
 	client.Subscribe.IsWindowFocused(func(h wintypes.HWND) bool {

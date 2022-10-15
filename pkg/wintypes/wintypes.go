@@ -24,8 +24,7 @@ type (
 	WPARAM        uintptr
 	HWINEVENTHOOK HANDLE
 	PBYTE         []BYTE
-	HOOKPROC      func(int, WPARAM, LPARAM) LRESULT
-	CBTProc       HOOKPROC
+	HOOKPROC      func(int32, WPARAM, LPARAM) LRESULT
 	WNDENUMPROC   func(HWND, LPARAM) LRESULT
 	WINEVENTPROC  func(HWINEVENTHOOK, DWORD, HWND, LONG, LONG, DWORD, DWORD) uintptr
 
@@ -57,7 +56,6 @@ const (
 	WH_KEYBOARD    WH_EVENTTYPE = 2
 	WH_KEYBOARD_LL              = 13
 	WH_CALLWNDPROC              = 4
-	WH_CBT                      = 5
 	WH_SHELL                    = 10
 )
 
@@ -145,12 +143,4 @@ type Window struct {
 
 type POINT struct {
 	X, Y LONG
-}
-
-type KBDLLHOOKSTRUCT struct {
-	VkCode      DWORD
-	ScanCode    DWORD
-	Flags       DWORD
-	Time        DWORD
-	DwExtraInfo uintptr
 }
