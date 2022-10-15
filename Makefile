@@ -9,7 +9,7 @@ test:
 	go test -v ./...
 
 events: 
-	go build -ldflags -H=windowsgui -o $(BINPATH)/events.exe ./cmd/events/ && nats pub Shell.RestartService events
+	go build -o $(BINPATH)/events.exe ./cmd/events/ && nats pub Shell.RestartService events
 
 driver: 
 	go build -o $(BINPATH)/driver.exe ./cmd/driver/ && nats pub Shell.RestartService driver
