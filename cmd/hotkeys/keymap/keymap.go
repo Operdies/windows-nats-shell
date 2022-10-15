@@ -131,7 +131,31 @@ func unleash(m *BindingTree) {
 	}
 }
 
-func (k *Keymap) ProcessEvent(kei shell.KeyboardEventInfo) bool {
+func getBinding(k *Keymap, vkey VKEY) *BindingTree {
+	mods := make([]uint32, 0, len(k.activeMods)+1)
+	for m, v := range k.activeMods {
+		if m == vkey {
+			continue
+		}
+		if v {
+			mods = append(mods, uint32(m))
+		}
+	}
+	mods = append(mods, uint32(vkey))
+	sortMods(mods)
+
+	var ok bool
+	root := k.Bindings
+	for _, m := range mods {
+		root, ok = root.Subtrees[m]
+		if ok == false || root == nil {
+			return nil
+		}
+	}
+	return root
+}
+
+func handleKey(k *Keymap, kei shell.KeyboardEventInfo, bmap *BindingTree) {
 	// We can't differentiate presses and holds from the event info.
 	// But we know it's a hold if the key is already mapped in activeMods
 	keyDown := kei.TransitionState == false
@@ -141,59 +165,30 @@ func (k *Keymap) ProcessEvent(kei shell.KeyboardEventInfo) bool {
 	// Clear the keymap when escape is pressed
 	if vkey == VK_ESCAPE {
 		k.activeMods = map[VKEY]bool{}
-		return false
+		return
 	}
-
-	var isPress, isRelease bool
 
 	previousState, ok := k.activeMods[vkey]
 	// If the value was not in the map, it should be considered 'false'
 	previousState = ok && previousState
-	isRelease = previousState && !keyDown
-	isPress = !previousState && keyDown
-
-	// Holds aren't supported.
-	// Can they be used in any meaningful way?
-	// It might make sense to fire a "VolumeUp" keybind on every repeat..
-	if !isPress && !isRelease {
-		return false
-	}
+	isRelease := previousState && !keyDown
+	isPress := !previousState && keyDown
 
 	if isPress || isRelease {
 		k.activeMods[vkey] = isPress
 	}
 
-	// Traverse the configured bindings to see if there is an exact match
-	route := make([]uint32, 0, len(k.activeMods)+1)
-	for m, v := range k.activeMods {
-		if v {
-			route = append(route, uint32(m))
-		}
+	// Let's only ever fire events when keys are released
+	if bmap != nil && bmap.HasAction && isRelease {
+		go unleash(bmap)
 	}
-	route = append(route, uint32(vkey))
-
-	sortMods(route)
-
-	fmt.Printf("route: %+v\n", route)
-
-	bmap := k.Bindings
-	for _, m := range route {
-		submap, ok := bmap.Subtrees[m]
-		if submap == nil || ok == false {
-			// No binding here
-			break
-		}
-		bmap = submap
-	}
-	fmt.Printf("bmap: %+v\n", bmap.Subtrees)
-	if bmap.HasAction {
-		// Let's only ever fire events when keys are released
-		if isRelease {
-			go unleash(bmap)
-		}
-		return true
-	}
-	return false
+}
+func (k *Keymap) ProcessEvent(kei shell.KeyboardEventInfo) bool {
+	// Return immediately after determining whether this key is handled.
+	binding := getBinding(k, VKEY(kei.VirtualKeyCode))
+	ret := binding != nil && binding.HasAction
+	go handleKey(k, kei, binding)
+	return ret
 }
 
 func buildTree(keys []hotkey) *BindingTree {

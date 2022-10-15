@@ -23,9 +23,8 @@ var (
 	user32                = syscall.MustLoadDLL("user32.dll")
 	systemParametersInfoA = user32.MustFindProc("SystemParametersInfoA")
 
-	hookDll      = syscall.MustLoadDLL("libhook")
-	shellProc    = hookDll.MustFindProc("ShellProc")
-	keyboardProc = hookDll.MustFindProc("KeyboardProc")
+	hookDll   = syscall.MustLoadDLL("libhook")
+	shellProc = hookDll.MustFindProc("ShellProc")
 )
 
 type tagMINIMIZEDMETRICS struct {
@@ -42,7 +41,6 @@ const (
 )
 
 type config struct {
-	KeyboardEvents   bool
 	KeyboardEventsLL bool
 	ShellEvents      bool
 }
@@ -59,23 +57,14 @@ func registerShell() {
 	systemParametersInfoA.Call(SPI_SETMINIMIZEDMETRICS, 0, uintptr(minptr), 0)
 }
 
-func ShellHookHandler(c chan shell.ShellEventInfo) wintypes.HOOKPROC {
-	return func(code int32, wParam wintypes.WPARAM, lParam wintypes.LPARAM) wintypes.LRESULT {
-		if code > 0 {
-
-		}
-		return winapi.CallNextHookEx(0, int(code), wParam, lParam)
-	}
-}
-
 func keyboardHandler(code int32, wParam wintypes.WPARAM, lParam wintypes.LPARAM) wintypes.LRESULT {
 	if code == 0 && lParam != 0 {
 		evt := *(*shell.KBDLLHOOKSTRUCT)(unsafe.Pointer(lParam))
-		evt2 := shell.WhKeyboardLlEvent(int(code), evt)
-		handled := nc.Request.WH_KEYBOARD(evt2)
-		//
+		eventInfo := shell.WhKeyboardLlEvent(int(code), evt)
+		handled := nc.Request.WH_KEYBOARD(eventInfo)
+
 		if handled {
-			// This doesn't actually intercept the event for other applications :(
+			// If a receiver has intercepted the event, we should avoid propagating it
 			return wintypes.LRESULT(1)
 		}
 	}
@@ -98,8 +87,6 @@ func publishEvent(eventType string, arguments []string) {
 
 	if eventType == "WH_SHELL" {
 		nc.Publish.WH_SHELL(shell.WhShellEvent(int(nCode), uintptr(wParam), uintptr(lParam)))
-	} else if eventType == "WH_KEYBOARD" {
-		nc.Publish.WH_KEYBOARD(shell.WhKeyboardEvent(int(nCode), wintypes.WPARAM(wParam), wintypes.LPARAM(lParam)))
 	}
 }
 
@@ -167,4 +154,5 @@ func main() {
 			}
 		}
 	}
+	select {}
 }

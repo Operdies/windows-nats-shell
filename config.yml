@@ -40,6 +40,11 @@ services:
     executable: ./hotkeys.exe
     custom:
       keymap:
+        - keys: ctrl+win+s 
+          actions:
+            - nats:
+                subject: System.LaunchProgram 
+                payload: Steam.lnk
         - keys: ctrl+alt+r
           actions:
             - nats:
@@ -54,3 +59,8 @@ services:
             - nats:
                 subject: System.LaunchProgramAsAdmin
                 payload: pwsh.exe
+        - keys: pause 
+          actions: 
+            - nats:
+                subject: System.LaunchProgram 
+                payload: Google Chrome.lnk

@@ -126,10 +126,8 @@ func main() {
 	render := make(chan bool)
 
 	_, err = nc.Subscribe.WH_SHELL(func(ci shell.ShellEventInfo) {
-		if ci.ShellCode == shell.HSHELL_ACTIVATESHELLWINDOW {
-			windowhelper.SetBottomMost(hwnd)
-			render <- true
-		}
+		windowhelper.SetBottomMost(hwnd)
+		render <- true
 	})
 	if err != nil {
 		panic(err)

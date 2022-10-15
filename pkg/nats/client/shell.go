@@ -126,6 +126,7 @@ func (client Requester) WH_KEYBOARD(evt shell.KeyboardEventInfo) bool {
 func (client Subscriber) WH_KEYBOARD(callback func(shell.KeyboardEventInfo) bool) (*nats.Subscription, error) {
 	return client.nc.Subscribe(shell.KeyboardEvent, func(msg *nats.Msg) {
 		evt := utils.DecodeAny[shell.KeyboardEventInfo](msg.Data)
-		callback(evt)
+		handled := callback(evt)
+		msg.Respond(utils.EncodeAny(handled))
 	})
 }
