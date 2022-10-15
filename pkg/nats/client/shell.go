@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
@@ -113,6 +114,50 @@ func (client Subscriber) WH_SHELL(callback func(shell.ShellEventInfo)) (*nats.Su
 
 func (client Publisher) WH_KEYBOARD(evt shell.KeyboardEventInfo) {
 	client.nc.Publish(shell.KeyboardEvent, utils.EncodeAny(evt))
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+)
+
+func RandStringBytesMask(n int) string {
+	b := make([]byte, n)
+	for i := 0; i < n; {
+		if idx := int(rand.Int63() & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i++
+		}
+	}
+	return string(b)
+}
+
+func (client Requester) RequestManyKeyboards(evt shell.KeyboardEventInfo) bool {
+	replyTo := RandStringBytesMask(10)
+
+	sub, err := client.nc.SubscribeSync(replyTo)
+	if err != nil {
+		panic(err)
+	}
+	defer sub.Unsubscribe()
+	client.nc.Flush()
+	client.nc.PublishRequest(shell.KeyboardEvent, replyTo, utils.EncodeAny(evt))
+	max := time.Millisecond
+	start := time.Now()
+
+	for time.Now().Sub(start) < max {
+		rem := max - time.Now().Sub(start)
+		msg, err := sub.NextMsg(rem)
+		if err != nil {
+			return false
+		}
+		response := utils.DecodeAny[bool](msg.Data)
+		if response {
+			return true
+		}
+	}
+	return false
 }
 
 func (client Requester) WH_KEYBOARD(evt shell.KeyboardEventInfo) bool {

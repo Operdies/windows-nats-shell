@@ -61,7 +61,7 @@ func keyboardHandler(code int32, wParam wintypes.WPARAM, lParam wintypes.LPARAM)
 	if code == 0 && lParam != 0 {
 		evt := *(*shell.KBDLLHOOKSTRUCT)(unsafe.Pointer(lParam))
 		eventInfo := shell.WhKeyboardLlEvent(int(code), evt)
-		handled := nc.Request.WH_KEYBOARD(eventInfo)
+		handled := nc.Request.RequestManyKeyboards(eventInfo)
 
 		if handled {
 			// If a receiver has intercepted the event, we should avoid propagating it

@@ -184,6 +184,11 @@ func handleKey(k *Keymap, kei shell.KeyboardEventInfo, bmap *BindingTree) {
 	}
 }
 func (k *Keymap) ProcessEvent(kei shell.KeyboardEventInfo) bool {
+	// This is a strange bug in consoles when a key is unmapped in the registry
+	// I know this is a strange place to patch it but whatever
+	if kei.ScanCode == 0 && kei.VirtualKeyCode == 255 {
+		return true
+	}
 	// Return immediately after determining whether this key is handled.
 	binding := getBinding(k, VKEY(kei.VirtualKeyCode))
 	ret := binding != nil && binding.HasAction
