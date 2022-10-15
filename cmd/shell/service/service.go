@@ -62,10 +62,11 @@ type NatsStdout struct {
 
 func CreateNatsStdout(subject string) *NatsStdout {
 	var n NatsStdout
-	n.subject = subject
+	n.subject = "stdout." + subject
 	n.nc, _ = nats.Connect(nats.DefaultURL)
 	return &n
 }
+
 func (n *NatsStdout) Close() {
 	n.nc.Close()
 }
@@ -96,8 +97,8 @@ func (j *ProcessJob) Start() error {
 	env = append(env, ref)
 	cmd.Env = env
 	cmd.Dir = prog.WorkingDirectory
-	natsStdout := CreateNatsStdout(fmt.Sprintf("Shell.%s.stdout", j.name))
-	natsStderr := CreateNatsStdout(fmt.Sprintf("Shell.%s.stderr", j.name))
+	natsStdout := CreateNatsStdout(j.name)
+	natsStderr := CreateNatsStdout(j.name)
 	cmd.Stdout = natsStdout
 	cmd.Stderr = natsStderr
 

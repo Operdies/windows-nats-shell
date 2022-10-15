@@ -133,7 +133,7 @@ func main() {
 	os.Chdir(here)
 	config := shell.LoadDefault()
 
-	shellLogger := service.CreateNatsStdout("Shell.stdout")
+	shellLogger := service.CreateNatsStdout("shell")
 	log.SetOutput(shellLogger)
 
 	for start(config) {

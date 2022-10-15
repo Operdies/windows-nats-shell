@@ -5,6 +5,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 	"gopkg.in/yaml.v3"
 )
 
@@ -204,7 +205,7 @@ func bitRange(number uint64, start, end uint8) uint64 {
 	return n & mask
 }
 
-func WhKeyboardEvent(nCode KeyEventCode, wParam uintptr, lParam uintptr) KeyboardEventInfo {
+func WhKeyboardEvent(nCode KeyEventCode, wParam wintypes.WPARAM, lParam wintypes.LPARAM) KeyboardEventInfo {
 	evt := KeyboardEventInfo{}
 	evt.KeyboardEventCode = nCode
 	evt.VirtualKeyCode = uint64(wParam)

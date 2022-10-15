@@ -27,7 +27,10 @@ var (
 	attachThreadInput        = user32.MustFindProc("AttachThreadInput")
 	getWindowThreadProcessId = user32.MustFindProc("GetWindowThreadProcessId")
 	systemParametersInfoA    = user32.MustFindProc("SystemParametersInfoA")
-	procGetMessage           = user32.MustFindProc("GetMessageW")
+
+	getMessageW      = user32.MustFindProc("GetMessageW")
+	translateMessage = user32.MustFindProc("TranslateMessage")
+	dispatchMessageW = user32.MustFindProc("DispatchMessageW")
 
 	setWinEventHook = user32.MustFindProc("SetWinEventHook")
 	unhookWinEvent  = user32.MustFindProc("UnhookWinEvent")
@@ -35,7 +38,7 @@ var (
 	kernel             = syscall.MustLoadDLL("kernel32.dll")
 	getCurrentThreadId = kernel.MustFindProc("GetCurrentThreadId")
 	getModuleHandle    = kernel.MustFindProc("GetModuleHandleA")
-	// loadLibrary        = kernel.MustFindProc("LoadLibrary")
+
 	getProcAddress = kernel.MustFindProc("GetProcAddress")
 
 	shell32       = syscall.MustLoadDLL("shell32.dll")
@@ -62,8 +65,18 @@ func ShellExecute(hwnd wintypes.HWND, lpOperation, lpFile, lpParameters, lpDirec
 	return wintypes.HINSTANCE(r), err
 }
 
-func GetMessage(msg *wintypes.MSG, hwnd wintypes.HWND, msgFilterMin uint32, msgFilterMax uint32) int {
-	ret, _, _ := procGetMessage.Call(
+func DispatchMessageW(msg **wintypes.MSG) wintypes.LRESULT {
+	ret, _, _ := dispatchMessageW.Call(uintptr(unsafe.Pointer(msg)))
+	return wintypes.LRESULT(ret)
+}
+
+func TranslateMessage(msg **wintypes.MSG) wintypes.BOOL {
+	ret, _, _ := translateMessage.Call(uintptr(unsafe.Pointer(msg)))
+	return wintypes.BOOL(ret)
+}
+
+func GetMessage(msg **wintypes.MSG, hwnd wintypes.HWND, msgFilterMin uint32, msgFilterMax uint32) int {
+	ret, _, _ := getMessageW.Call(
 		uintptr(unsafe.Pointer(msg)),
 		uintptr(hwnd),
 		uintptr(msgFilterMin),
@@ -176,8 +189,15 @@ func SetWindowsHookExW(idHook wintypes.WH_EVENTTYPE, lpfn uintptr, hInstance win
 	return wintypes.HHOOK(r0)
 }
 
-func UnhookWindowsHook(hhook wintypes.HHOOK) {
-	unhookWinEvent.Call(uintptr(hhook))
+func UnhookWindowsHookEx(hhook wintypes.HHOOK) bool {
+	r0, _, _ := unhookWindowsHookEx.Call(uintptr(hhook))
+	success := r0 != 0
+	return success
+}
+func UnhookWinEvent(hhook wintypes.HHOOK) bool {
+	r0, _, _ := unhookWinEvent.Call(uintptr(hhook))
+	success := r0 != 0
+	return success
 }
 
 func CallNextHookEx(hhk wintypes.HHOOK, nCode int, wParam wintypes.WPARAM, lParam wintypes.LPARAM) wintypes.LRESULT {

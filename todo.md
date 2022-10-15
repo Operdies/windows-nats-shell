@@ -90,3 +90,8 @@ Scribblings of a madman
   and then discarded by the shell. If anyone cares about the logs they must subscribe to them.
   If the service name is `$subject.stdout` then a service can easily get all logs with `*.stdout`.
   There should be a database service which collects the logs.
+
+> Be aware that the WH_MOUSE, WH_KEYBOARD, WH_JOURNAL*, WH_SHELL, and low-level hooks can be called on the thread that installed the hook rather than the thread processing the hook. For these hooks, it is possible that both the 32-bit and 64-bit hooks will be called if a 32-bit hook is ahead of a 64-bit hook in the hook chain. For more information, see Using Hooks.
+> https://github.com/moutend/go-hook/blob/develop/pkg/keyboard/keyboard_windows.go 
+> please immediately get rid of the hooks running in foreign threads??
+> please also investigate if WH_KEYBOARD_LL can do anything WH_KEYBOARD can't
