@@ -82,8 +82,8 @@ func start(config *shell.Configuration) bool {
 		return nil
 	})
 	subs = append(subs, s)
-	s, _ = client.Subscribe.Config(func(key string) *shell.Service {
-		if section, ok := config.Services[key]; ok {
+	s, _ = client.Subscribe.Config(func(key string) any {
+		if section, ok := config.ServiceConfigs[key]; ok {
 			return &section
 		}
 		return nil

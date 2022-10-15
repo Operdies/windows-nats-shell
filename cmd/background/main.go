@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
-	"github.com/nats-io/nats.go"
 	"github.com/operdies/windows-nats-shell/cmd/background/colors"
 	"github.com/operdies/windows-nats-shell/cmd/background/gfx"
 	"github.com/operdies/windows-nats-shell/cmd/background/windowhelper"
@@ -22,7 +21,7 @@ func init() {
 	runtime.LockOSThread()
 }
 
-type customCfg struct {
+type config struct {
 	Background struct {
 		Path string
 	}
@@ -77,8 +76,9 @@ func createQuadVAO() uint32 {
 }
 
 func main() {
-	cfg, _ := client.Default().Request.Config("")
-	custom, _ := shell.GetCustom[customCfg](cfg)
+	nc := client.Default()
+	defer nc.Close()
+	cfg := client.GetConfig[config](nc.Request)
 	err := glfw.Init()
 	if err != nil {
 		panic(err)
@@ -110,18 +110,16 @@ func main() {
 
 	hwnd := unsafe.Pointer(window.GetWin32Window())
 
-	colors, _ := colors.StringToColor(custom.Render.Clearcolor)
+	colors, _ := colors.StringToColor(cfg.Render.Clearcolor)
 
 	gl.ClearColor(colors[0], colors[1], colors[2], colors[3])
-	ticker := time.NewTicker(time.Millisecond * time.Duration(custom.Render.Updaterate))
+	ticker := time.NewTicker(time.Millisecond * time.Duration(cfg.Render.Updaterate))
 	poller := time.NewTicker(time.Millisecond * 20)
 
 	quit := make(chan bool)
 	window.SetCloseCallback(func(w *glfw.Window) {
 		quit <- true
 	})
-
-	nc, _ := client.New(nats.DefaultURL, time.Second)
 
 	render := make(chan bool)
 
@@ -144,8 +142,8 @@ func main() {
 		}()
 	})
 
-	vertexShader, _ := gfx.NewShaderFromFile(custom.Shader.Vert, gl.VERTEX_SHADER)
-	fragmentShader, err := gfx.NewShaderFromFile(custom.Shader.Frag, gl.FRAGMENT_SHADER)
+	vertexShader, _ := gfx.NewShaderFromFile(cfg.Shader.Vert, gl.VERTEX_SHADER)
+	fragmentShader, err := gfx.NewShaderFromFile(cfg.Shader.Frag, gl.FRAGMENT_SHADER)
 	if err != nil {
 		panic(err)
 	}

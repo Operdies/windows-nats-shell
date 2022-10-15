@@ -9,8 +9,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/nats-io/nats.go"
-
 	screenApi "github.com/operdies/windows-nats-shell/pkg/nats/api/screen"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
@@ -21,7 +19,7 @@ import (
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
-type customOptions struct {
+type config struct {
 	Launcher struct {
 		Extensions        []string
 		IncludeSystemPath bool
@@ -44,22 +42,18 @@ func superFocusStealer(handle wintypes.HWND) wintypes.BOOL {
 }
 
 func ListenIndefinitely() {
-	client, _ := client.New(nats.DefaultURL, time.Second)
-	defer client.Close()
+	nc := client.Default()
+	defer nc.Close()
 
-	cfg, err := client.Request.Config("")
-	if err != nil {
-		panic(err)
-	}
-	custom, _ := shell.GetCustom[customOptions](cfg)
-	filewatcher.SetExtentions(custom.Launcher.Extensions)
-	indexItems(custom)
+	cfg := client.GetConfig[config](nc.Request)
+	filewatcher.SetExtentions(cfg.Launcher.Extensions)
+	indexItems(cfg)
 
 	// Ensure windows are computed and published at most once per second
-	batchedPublish := utils.Batcher(func() { client.Publish.WindowsUpdated(winapi.GetVisibleWindows()) },
+	batchedPublish := utils.Batcher(func() { nc.Publish.WindowsUpdated(winapi.GetVisibleWindows()) },
 		time.Millisecond*100, time.Millisecond*500)
 
-	client.Subscribe.WH_SHELL(func(e shell.ShellEventInfo) {
+	nc.Subscribe.WH_SHELL(func(e shell.ShellEventInfo) {
 		watched := map[shell.WM_SHELL_CODE]bool{
 			shell.HSHELL_WINDOWACTIVATED:     true,
 			shell.HSHELL_WINDOWCREATED:       true,
@@ -74,18 +68,18 @@ func ListenIndefinitely() {
 		}
 	})
 
-	client.Subscribe.GetWindows(winapi.GetVisibleWindows)
+	nc.Subscribe.GetWindows(winapi.GetVisibleWindows)
 
-	client.Subscribe.IsWindowFocused(func(h wintypes.HWND) bool {
+	nc.Subscribe.IsWindowFocused(func(h wintypes.HWND) bool {
 		current := winapi.GetForegroundWindow()
 		return current == h
 	})
 
-	client.Subscribe.SetFocus(func(h wintypes.HWND) bool {
+	nc.Subscribe.SetFocus(func(h wintypes.HWND) bool {
 		return superFocusStealer(h) == 1
 	})
 
-	client.Subscribe.GetPrograms(func() []string {
+	nc.Subscribe.GetPrograms(func() []string {
 		// Ensure the files are properly indexed before proceeding
 		return getFriendlyNames()
 	})
@@ -107,16 +101,16 @@ func ListenIndefinitely() {
 		}
 		return "Started " + requested
 	}
-	client.Subscribe.LaunchProgram(func(prog string) string {
+	nc.Subscribe.LaunchProgram(func(prog string) string {
 		return launch(prog, false)
 	})
-	client.Subscribe.LaunchProgramAsAdmin(func(prog string) string {
+	nc.Subscribe.LaunchProgramAsAdmin(func(prog string) string {
 		return launch(prog, true)
 	})
-	client.Subscribe.GetResolution(func() screenApi.Resolution {
+	nc.Subscribe.GetResolution(func() screenApi.Resolution {
 		return screen.GetResolution()
 	})
-	client.Subscribe.SetResolution(func(r screenApi.Resolution) error {
+	nc.Subscribe.SetResolution(func(r screenApi.Resolution) error {
 		return screen.SetResolution(r)
 	})
 	select {}
@@ -198,7 +192,7 @@ var (
 	watchers = make([]*filewatcher.WatchedDir, 0, 20)
 )
 
-func indexItems(custom customOptions) {
+func indexItems(custom config) {
 	for _, source := range custom.Launcher.Sources {
 		watchers = append(watchers, filewatcher.Create(source.Path, source.Recursive, source.Watch))
 	}

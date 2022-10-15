@@ -1,66 +1,62 @@
 services:
   background:
     executable: ./background.exe
-    custom:
-      background:
-        path: C:/Users/alexw/Documents/wallpaper.png
-      shader:
-        vert: ../cmd/background/shader.vert
-        frag: ../cmd/background/shader.frag
-      render:
-        updaterate: 2000 # Update rate in milliseconds
-        clearcolor: 423
-        # clearcolor: "#701278"
+    background:
+      path: C:/Users/alexw/Documents/wallpaper.png
+    shader:
+      vert: ../cmd/background/shader.vert
+      frag: ../cmd/background/shader.frag
+    render:
+      updaterate: 2000 # Update rate in milliseconds
+      clearcolor: 423
+      # clearcolor: "#701278"
   events:
     executable: ./events.exe
-    custom:
-      keyboardeventsll: true
-      shellevents: true
+    keyboardeventsll: true
+    shellevents: true
   driver:
     executable: ./driver.exe
-    custom:
-      launcher:
-        includesystempath: true
-        watchsystempath: true
-        extensions: [.exe, .lnk, .bat, .ps1, .url, .png, .jpg, .gif]
-        sources:
-          - path: C:/Users/alexw/Desktop
-            recursive: true
-            watch: true
-          - path: C:/Users/alexw/scripts
-            recursive: true
-            watch: true
-          - path: 'C:/Users/alexw/AppData/Roaming/Microsoft/Windows/Start Menu/'
-            recursive: true
-            watch: true
-          - path: 'C:/ProgramData/Microsoft/Windows/Start Menu/'
-            recursive: true
-            watch: true
+    launcher:
+      includesystempath: true
+      watchsystempath: true
+      extensions: [.exe, .lnk, .bat, .ps1, .url, .png, .jpg, .gif]
+      sources:
+        - path: C:/Users/alexw/Desktop
+          recursive: true
+          watch: true
+        - path: C:/Users/alexw/scripts
+          recursive: true
+          watch: true
+        - path: 'C:/Users/alexw/AppData/Roaming/Microsoft/Windows/Start Menu/'
+          recursive: true
+          watch: true
+        - path: 'C:/ProgramData/Microsoft/Windows/Start Menu/'
+          recursive: true
+          watch: true
   hotkeys:
     executable: ./hotkeys.exe
-    custom:
-      keymap:
-        - keys: ctrl+win+s 
-          actions:
-            - nats:
-                subject: System.LaunchProgram 
-                payload: Steam.lnk
-        - keys: ctrl+alt+r
-          actions:
-            - nats:
-                subject: Shell.Restart
-        - keys: ctrl+shift+p
-          actions:
-            - nats:
-                subject: System.LaunchProgram
-                payload: pwsh.exe
-        - keys: ctrl+alt+shift+p
-          actions:
-            - nats:
-                subject: System.LaunchProgramAsAdmin
-                payload: pwsh.exe
-        - keys: pause 
-          actions: 
-            - nats:
-                subject: System.LaunchProgram 
-                payload: Google Chrome.lnk
+    keymap:
+      - keys: ctrl+win+s 
+        actions:
+          - nats:
+              subject: System.LaunchProgram 
+              payload: Steam.lnk
+      - keys: ctrl+alt+r
+        actions:
+          - nats:
+              subject: Shell.Restart
+      - keys: ctrl+shift+p
+        actions:
+          - nats:
+              subject: System.LaunchProgram
+              payload: pwsh.exe
+      - keys: ctrl+alt+shift+p
+        actions:
+          - nats:
+              subject: System.LaunchProgramAsAdmin
+              payload: pwsh.exe
+      - keys: pause 
+        actions: 
+          - nats:
+              subject: System.LaunchProgram 
+              payload: Google Chrome.lnk

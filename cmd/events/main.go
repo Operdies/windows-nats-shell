@@ -127,18 +127,16 @@ func server() {
 }
 
 func main() {
-	cfg, _ := nc.Request.Config("")
-	custom, _ := shell.GetCustom[config](cfg)
-
+	cfg := client.GetConfig[config](nc.Request)
 	registerShell()
 
-	if custom.ShellEvents {
+	if cfg.ShellEvents {
 		hook := winapi.SetWindowsHookExW(wintypes.WH_SHELL, shellProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
 		defer winapi.UnhookWindowsHookEx(hook)
 		go server()
 	}
 
-	if custom.KeyboardEventsLL {
+	if cfg.KeyboardEventsLL {
 		callback := syscall.NewCallback(keyboardHandler)
 		hook := winapi.SetWindowsHookExW(wintypes.WH_KEYBOARD_LL, callback, 0, 0)
 		defer winapi.UnhookWindowsHookEx(hook)

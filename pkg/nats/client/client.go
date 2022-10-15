@@ -37,7 +37,10 @@ func (client Client) Close() {
 }
 
 func Default() Client {
-	c, _ := New(nats.DefaultURL, time.Second)
+	c, err := New(nats.DefaultURL, time.Second)
+	if err != nil {
+		panic(err)
+	}
 	return c
 }
 func New(url string, timeout time.Duration) (c Client, err error) {

@@ -24,7 +24,7 @@ type action struct {
 		Payload any
 	}
 }
-type keymap struct {
+type config struct {
 	Keymap []struct {
 		Keys    string
 		Actions []action
@@ -228,12 +228,12 @@ func Create() *Keymap {
 	var result Keymap
 	result.activeMods = map[VKEY]bool{}
 	c := client.Default()
-	cfg, _ := c.Request.Config("")
-	custom, _ := shell.GetCustom[keymap](cfg)
+	cfg := client.GetConfig[config](c.Request)
+	c.Close()
 
-	hotkeys := make([]hotkey, 0, len(custom.Keymap))
+	hotkeys := make([]hotkey, 0, len(cfg.Keymap))
 
-	for _, mapping := range custom.Keymap {
+	for _, mapping := range cfg.Keymap {
 		keys := mapping.Keys
 		parts := strings.Split(keys, "+")
 		sanitizedParts := make([]string, 0, len(parts))

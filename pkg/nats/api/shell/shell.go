@@ -56,19 +56,14 @@ type Service struct {
 	Environment []string
 }
 
-func GetCustom[T any](s Service) (result T, err error) {
-	custom := s.Custom
-	buffer, err := yaml.Marshal(custom)
-	if err != nil {
-		return
-	}
-	err = yaml.Unmarshal(buffer, &result)
-	return
+type Configuration struct {
+	Path           string // Path to the file the config was loaded from
+	Services       map[string]Service
+	ServiceConfigs map[string]any
 }
 
-type Configuration struct {
-	Path     string // Path to the file the config was loaded from
-	Services map[string]Service
+type cfg2 struct {
+	Services map[string]any
 }
 
 type ShellEventInfo struct {
@@ -202,8 +197,11 @@ func parseCfg(path string) (config *Configuration, err error) {
 	if err != nil {
 		return
 	}
+	var cfgHelper cfg2
+	err = yaml.Unmarshal(content, &cfgHelper)
 	config = &cfg
 	config.Path = path
+	config.ServiceConfigs = cfgHelper.Services
 	return
 }
 

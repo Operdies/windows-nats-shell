@@ -66,7 +66,7 @@ func (client Requester) QuitShell() error {
 	return utils.DecodeAny[error](msg.Data)
 }
 
-func (client Subscriber) Config(callback func(string) *shell.Service) (*nats.Subscription, error) {
+func (client Subscriber) Config(callback func(string) any) (*nats.Subscription, error) {
 	return client.nc.Subscribe(shell.GetService, func(msg *nats.Msg) {
 		key := utils.DecodeAny[string](msg.Data)
 		config := callback(key)
@@ -74,24 +74,22 @@ func (client Subscriber) Config(callback func(string) *shell.Service) (*nats.Sub
 	})
 }
 
-// Get the request for the named service.
-// If the empty string is specified, this function attempts to
-// find the currently executing service based on the environment
-// variable
-func (client Requester) Config(name string) (service shell.Service, err error) {
+func GetConfig[T any](client *Requester) T {
+	name := os.Getenv(shell.SERVICE_ENV_KEY)
 	if name == "" {
-		name = os.Getenv(shell.SERVICE_ENV_KEY)
+		panic(fmt.Sprintf("Environment variable '%v' not set.", shell.SERVICE_ENV_KEY))
 	}
-	if name == "" {
-		fmt.Println("No such config: ", name)
-		return
-	}
+	result, _ := GetServiceConfig[T](client, name)
+	return result
+}
+
+func GetServiceConfig[T any](client *Requester, name string) (result T, err error) {
 	msg, err := client.nc.Request(shell.GetService, []byte(name), client.timeout)
 	if err != nil {
 		return
 	}
-	service = utils.DecodeAny[shell.Service](msg.Data)
-	return
+	result = utils.DecodeAny[T](msg.Data)
+	return result, nil
 }
 
 func (client Subscriber) ShellConfig(callback func() shell.Configuration) (*nats.Subscription, error) {
