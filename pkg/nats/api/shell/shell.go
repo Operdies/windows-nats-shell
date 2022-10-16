@@ -5,7 +5,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 	"gopkg.in/yaml.v3"
 )
 
@@ -123,68 +122,15 @@ func WhShellEvent(nCode WM_SHELL_CODE, wParam uintptr, lParam uintptr) ShellEven
 }
 
 type KeyboardEventInfo struct {
-	KeyboardEventCode KeyEventCode
-	ScanCode          uint64
-	// The repeat count. The value is the number of times the keystroke is repeated as a result of the user's holding down the key.
-	// bit 0-15
-	RepeatCount uint64
+	ScanCode uint64
 	// The scan code. The value depends on the OEM.
-	// bit 16-23
 	VirtualKeyCode uint64
 	// Indicates whether the key is an extended key, such as a function key or a key on the numeric keypad. The value is 1 if the key is an extended key; otherwise, it is 0.
-	// bit 24
 	IsExtended bool
 	// True if ALT is down, otherwise 0
-	// bit 29
 	ContextCode bool
-	// The previous key state. The value is 1 if the key is down before the message is sent; it is 0 if the key is up.
-	// bit 30
-	PreviousKeyState bool
 	// The transition state. The value is 0 if the key is being pressed and 1 if it is being released.
-	// bit 31
 	TransitionState bool
-}
-
-func bitRange(number uint64, start, end uint8) uint64 {
-	var mask uint64
-	var n uint64
-	n = number >> start
-	rng := end - start
-	mask = (1 << (rng + 1)) - 1
-	return n & mask
-}
-
-type KBDLLHOOKSTRUCT struct {
-	VkCode      wintypes.DWORD
-	ScanCode    wintypes.DWORD
-	Flags       wintypes.DWORD
-	Time        wintypes.DWORD
-	DwExtraInfo uintptr
-}
-
-func WhKeyboardLlEvent(nCode KeyEventCode, info KBDLLHOOKSTRUCT) KeyboardEventInfo {
-	var evt KeyboardEventInfo
-	evt.KeyboardEventCode = nCode
-	evt.ScanCode = uint64(info.ScanCode)
-	evt.RepeatCount = 0 //
-	evt.VirtualKeyCode = uint64(info.VkCode)
-	evt.IsExtended = bitRange(uint64(info.Flags), 0, 0) == 1
-	evt.ContextCode = bitRange(uint64(info.Flags), 5, 5) == 1
-	evt.TransitionState = bitRange(uint64(info.Flags), 7, 7) == 1
-	return evt
-}
-
-func WhKeyboardEvent(nCode KeyEventCode, wParam wintypes.WPARAM, lParam wintypes.LPARAM) KeyboardEventInfo {
-	evt := KeyboardEventInfo{}
-	evt.KeyboardEventCode = nCode
-	evt.ScanCode = uint64(wParam)
-	evt.RepeatCount = bitRange(uint64(lParam), 0, 15)
-	evt.VirtualKeyCode = bitRange(uint64(lParam), 16, 23)
-	evt.IsExtended = bitRange(uint64(lParam), 24, 24) == 1
-	evt.ContextCode = bitRange(uint64(lParam), 29, 29) == 1
-	evt.PreviousKeyState = bitRange(uint64(lParam), 30, 30) == 1
-	evt.TransitionState = bitRange(uint64(lParam), 31, 31) == 1
-	return evt
 }
 
 func parseCfg(path string) (config *Configuration, err error) {

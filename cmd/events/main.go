@@ -12,6 +12,7 @@ import (
 
 	"github.com/natefinch/npipe"
 	"github.com/nats-io/nats.go"
+	"github.com/operdies/windows-nats-shell/pkg/keyboard"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/utils/query"
@@ -55,21 +56,6 @@ func registerShell() {
 	// This call is required in order to receive shell events.
 	// It also hides minimized windows so there is no pseudo-taskbar
 	systemParametersInfoA.Call(SPI_SETMINIMIZEDMETRICS, 0, uintptr(minptr), 0)
-}
-
-func keyboardHandler(code int32, wParam wintypes.WPARAM, lParam wintypes.LPARAM) wintypes.LRESULT {
-	if code == 0 && lParam != 0 {
-		evt := *(*shell.KBDLLHOOKSTRUCT)(unsafe.Pointer(lParam))
-		eventInfo := shell.WhKeyboardLlEvent(int(code), evt)
-		handled := nc.Request.RequestManyKeyboards(eventInfo)
-
-		if handled {
-			// If a receiver has intercepted the event, we should avoid propagating it
-			return wintypes.LRESULT(1)
-		}
-	}
-
-	return winapi.CallNextHookEx(0, int(code), wParam, lParam)
 }
 
 var nc client.Client
@@ -137,20 +123,12 @@ func main() {
 	}
 
 	if cfg.KeyboardEventsLL {
-		callback := syscall.NewCallback(keyboardHandler)
-		hook := winapi.SetWindowsHookExW(wintypes.WH_KEYBOARD_LL, callback, 0, 0)
-		defer winapi.UnhookWindowsHookEx(hook)
-		// Indefinitely process events
-		// Otherwise, KeyboardEventsLl won't fire
-		var msg *wintypes.MSG
-		for {
-			result := winapi.GetMessage(&msg, 0, 0, 0)
-			// Ignore any errors
-			if result > 0 {
-				winapi.TranslateMessage(&msg)
-				winapi.DispatchMessageW(&msg)
-			}
-		}
+		hook, _ := keyboard.InstallHook(func(kei shell.KeyboardEventInfo) bool {
+			nc.Publish.WH_KEYBOARD(kei)
+			return false
+		})
+		defer keyboard.UninstallHook(hook)
 	}
+
 	select {}
 }

@@ -28,6 +28,7 @@ Update: this almost sounds like a service. Support for this should probably be s
 logs for services could be stored in a sqlite database
 and be queried using NATS. Then there would be no need
 for a console window to host the shell
+Since logs are now published in nats, this database could just record everything
 
 ## Kill menu
 
@@ -53,21 +54,6 @@ Investigate what integrations exist / are possible
 
 Would make the shell usable without a linux driver. The shortcut manager needs to support input/output. Then the rofi implementation can respond using nats
 
-## Custom configs
-
-Currently, the workaround for a service to have a custom config is the custom key, and a helper method to remarshal the config.
-We can avoid the `custom` key if the `Config` endpoint returns the entire config (and not just the part the shell understands)
-Then the requesting service should say `client.GetConfig[MyConfig](requester)`, and define `MyConfig` like
-
-```go
-type MyConfig struct {
-		  base shell.Service
-		  MySettings string
-	  }
-```
-
-This would be much simpler
-
 ## Thought cabinet
 
 > Service namespaces?
@@ -88,10 +74,3 @@ Should all e.g. Windows APIs require a window as input? If an action only requir
 More generally, should all X apis take an input of the same form as their outputs? It would make it possible to return meaningful errors.
 Rofi integration is a prerequisite for this, because the alternative is way too complicated on the scripting side.
 
-> When are stdout/stderr logs consumed?
-
-It does not seem like a viable solution to store all logs in memory indefinitely.
-It would make the most sense if logs are published immediately as they arrive,
-and then discarded by the shell. If anyone cares about the logs they must subscribe to them.
-If the service name is `$subject.stdout` then a service can easily get all logs with `*.stdout`.
-There should be a database service which collects the logs.

@@ -9,10 +9,9 @@ services:
     render:
       updaterate: 2000 # Update rate in milliseconds
       clearcolor: 423
-      # clearcolor: "#701278"
   events:
     executable: ./events.exe
-    keyboardeventsll: true
+    keyboardeventsll: false
     shellevents: true
   driver:
     executable: ./driver.exe
