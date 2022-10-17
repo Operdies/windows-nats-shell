@@ -8,11 +8,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unsafe"
 
 	"github.com/natefinch/npipe"
 	"github.com/nats-io/nats.go"
-	"github.com/operdies/windows-nats-shell/pkg/keyboard"
+	"github.com/operdies/windows-nats-shell/pkg/hooks/keyboard"
+	"github.com/operdies/windows-nats-shell/pkg/hooks/mouse"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/utils/query"
@@ -21,41 +21,14 @@ import (
 )
 
 var (
-	user32                = syscall.MustLoadDLL("user32.dll")
-	systemParametersInfoA = user32.MustFindProc("SystemParametersInfoA")
-
 	hookDll   = syscall.MustLoadDLL("libhook")
 	shellProc = hookDll.MustFindProc("ShellProc")
 )
 
-type tagMINIMIZEDMETRICS struct {
-	cbSize   uint32
-	iWidth   int32
-	iHorzGap int32
-	iVertGap int32
-	iArrange int32
-}
-
-const (
-	ARW_HIDE                = 0x0008
-	SPI_SETMINIMIZEDMETRICS = 0x002C
-)
-
 type config struct {
-	KeyboardEventsLL bool
-	ShellEvents      bool
-}
-
-func registerShell() {
-	var min tagMINIMIZEDMETRICS
-	min.iArrange = ARW_HIDE
-	min.cbSize = uint32(unsafe.Sizeof(min))
-
-	minptr := unsafe.Pointer(&min)
-
-	// This call is required in order to receive shell events.
-	// It also hides minimized windows so there is no pseudo-taskbar
-	systemParametersInfoA.Call(SPI_SETMINIMIZEDMETRICS, 0, uintptr(minptr), 0)
+	KeyboardEvents bool
+	MouseEvents    bool
+	ShellEvents    bool
 }
 
 var nc client.Client
@@ -114,7 +87,6 @@ func server() {
 
 func main() {
 	cfg := client.GetConfig[config](nc.Request)
-	registerShell()
 
 	if cfg.ShellEvents {
 		hook := winapi.SetWindowsHookExW(wintypes.WH_SHELL, shellProc.Addr(), wintypes.HINSTANCE(hookDll.Handle), 0)
@@ -122,12 +94,20 @@ func main() {
 		go server()
 	}
 
-	if cfg.KeyboardEventsLL {
-		hook, _ := keyboard.InstallHook(func(kei shell.KeyboardEventInfo) bool {
+	if cfg.KeyboardEvents {
+		hook, _ := keyboard.InstallHook(func(kei keyboard.KeyboardEventInfo) bool {
 			nc.Publish.WH_KEYBOARD(kei)
 			return false
 		})
-		defer keyboard.UninstallHook(hook)
+		defer hook.Uninstall()
+	}
+
+	if cfg.MouseEvents {
+		hook, _ := mouse.InstallHook(func(mei mouse.MouseEventInfo) bool {
+			nc.Publish.WH_MOUSE(mei)
+			return false
+		})
+		defer hook.Uninstall()
 	}
 
 	select {}

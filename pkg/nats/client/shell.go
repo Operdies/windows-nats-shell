@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/nats-io/nats.go"
+	"github.com/operdies/windows-nats-shell/pkg/hooks/keyboard"
+	"github.com/operdies/windows-nats-shell/pkg/hooks/mouse"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/utils"
 )
@@ -108,19 +110,24 @@ func (client Subscriber) WH_SHELL(callback func(shell.ShellEventInfo)) (*nats.Su
 	})
 }
 
-func (client Publisher) WH_KEYBOARD(evt shell.KeyboardEventInfo) {
+func (client Publisher) WH_MOUSE(evt mouse.MouseEventInfo) {
+	client.nc.Publish(shell.MouseEvent, utils.EncodeAny(evt))
+}
+
+func (client Subscriber) WH_MOUSE(callback func(mouse.MouseEventInfo) bool) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.MouseEvent, func(msg *nats.Msg) {
+		evt := utils.DecodeAny[mouse.MouseEventInfo](msg.Data)
+		handled := callback(evt)
+		msg.Respond(utils.EncodeAny(handled))
+	})
+}
+func (client Publisher) WH_KEYBOARD(evt keyboard.KeyboardEventInfo) {
 	client.nc.Publish(shell.KeyboardEvent, utils.EncodeAny(evt))
 }
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const (
-	letterIdxBits = 6                    // 6 bits to represent a letter index
-	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
-)
-
-func (client Subscriber) WH_KEYBOARD(callback func(shell.KeyboardEventInfo) bool) (*nats.Subscription, error) {
+func (client Subscriber) WH_KEYBOARD(callback func(keyboard.KeyboardEventInfo) bool) (*nats.Subscription, error) {
 	return client.nc.Subscribe(shell.KeyboardEvent, func(msg *nats.Msg) {
-		evt := utils.DecodeAny[shell.KeyboardEventInfo](msg.Data)
+		evt := utils.DecodeAny[keyboard.KeyboardEventInfo](msg.Data)
 		handled := callback(evt)
 		msg.Respond(utils.EncodeAny(handled))
 	})

@@ -7,7 +7,7 @@ import (
 	"syscall"
 
 	"github.com/nats-io/nats.go"
-	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
+	"github.com/operdies/windows-nats-shell/pkg/hooks/keyboard"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/utils"
 )
@@ -155,7 +155,7 @@ func getBinding(k *Keymap, vkey VKEY) *BindingTree {
 	return root
 }
 
-func handleKey(k *Keymap, kei shell.KeyboardEventInfo, bmap *BindingTree) {
+func handleKey(k *Keymap, kei keyboard.KeyboardEventInfo, bmap *BindingTree) {
 	// We can't differentiate presses and holds from the event info.
 	// But we know it's a hold if the key is already mapped in activeMods
 	keyDown := kei.TransitionState == false
@@ -183,7 +183,7 @@ func handleKey(k *Keymap, kei shell.KeyboardEventInfo, bmap *BindingTree) {
 		go unleash(bmap)
 	}
 }
-func (k *Keymap) ProcessEvent(kei shell.KeyboardEventInfo) bool {
+func (k *Keymap) ProcessEvent(kei keyboard.KeyboardEventInfo) bool {
 	// This is a strange bug in consoles when a key is unmapped in the registry
 	// I know this is a strange place to patch it but whatever
 	if kei.ScanCode == 0 && kei.VirtualKeyCode == 255 {

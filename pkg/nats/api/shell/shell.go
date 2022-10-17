@@ -33,8 +33,10 @@ const (
 	QuitShell = "Shell.Quit"
 	// Some shell event happened
 	ShellEvent = "Shell.ShellEvent"
-	// Some kyboard event happened
+	// Some keyboard event happened
 	KeyboardEvent = "Shell.KeyboardEvent"
+	// Some mouse event happened
+	MouseEvent = "Shell.MouseEvent"
 )
 
 const (
@@ -121,18 +123,6 @@ func WhShellEvent(nCode WM_SHELL_CODE, wParam uintptr, lParam uintptr) ShellEven
 	return e
 }
 
-type KeyboardEventInfo struct {
-	ScanCode uint64
-	// The scan code. The value depends on the OEM.
-	VirtualKeyCode uint64
-	// Indicates whether the key is an extended key, such as a function key or a key on the numeric keypad. The value is 1 if the key is an extended key; otherwise, it is 0.
-	IsExtended bool
-	// True if ALT is down, otherwise 0
-	ContextCode bool
-	// The transition state. The value is 0 if the key is being pressed and 1 if it is being released.
-	TransitionState bool
-}
-
 func parseCfg(path string) (config *Configuration, err error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -177,15 +167,23 @@ func getExeDir() string {
 }
 
 func getConfigPaths() []string {
-	result := make([]string, 0)
+	result := make([]string, 1)
+	appdata, _ := os.UserHomeDir()
+	result[0] = path.Join(appdata, "AppData", "Local", "windows-nats-shell", "config.yml")
 	exeDir := getExeDir()
+	fix := func(s string) string {
+		return strings.ReplaceAll(s, `/`, `\`)
+	}
 	if exeDir != "" {
 		result = append(result, path.Join(exeDir, "config.yml"))
-		result = append(result, path.Join(path.Dir(exeDir), "config.yml"))
 	}
 
 	wd, _ := os.Getwd()
 	result = append(result, path.Join(wd, "config.yml"))
+
+	for i := range result {
+		result[i] = fix(result[i])
+	}
 
 	return result
 }

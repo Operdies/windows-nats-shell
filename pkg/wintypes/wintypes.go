@@ -1,5 +1,7 @@
 package wintypes
 
+import "unsafe"
+
 // SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, SPIF_+UPDATEINIFILE)
 
 // https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types
@@ -24,6 +26,7 @@ type (
 	WPARAM        uintptr
 	HWINEVENTHOOK HANDLE
 	PBYTE         []BYTE
+	HOOKLLPROC    func(int, WPARAM, unsafe.Pointer) LRESULT
 	HOOKPROC      func(int32, WPARAM, LPARAM) LRESULT
 	WNDENUMPROC   func(HWND, LPARAM) LRESULT
 	WINEVENTPROC  func(HWINEVENTHOOK, DWORD, HWND, LONG, LONG, DWORD, DWORD) uintptr
@@ -55,6 +58,7 @@ const (
 const (
 	WH_KEYBOARD    WH_EVENTTYPE = 2
 	WH_KEYBOARD_LL              = 13
+	WH_MOUSE_LL                 = 14
 	WH_CALLWNDPROC              = 4
 	WH_SHELL                    = 10
 )
@@ -144,3 +148,23 @@ type Window struct {
 type POINT struct {
 	X, Y LONG
 }
+
+type GW_CMD = uint
+
+const (
+	GW_HWNDFIRST    GW_CMD = 0
+	GW_HWNDLAST            = 1
+	GW_HWNDNEXT            = 2
+	GW_HWNDPREV            = 3
+	GW_OWNER               = 4
+	GW_CHILD               = 5
+	GW_ENABLEDPOPUP        = 6
+)
+
+type GA_FLAGS = uint
+
+const (
+	GA_PARENT    GA_FLAGS = 1
+	GA_ROOT               = 2
+	GA_ROOTOWNER          = 3
+)

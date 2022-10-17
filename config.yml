@@ -11,7 +11,8 @@ services:
       clearcolor: 423
   events:
     executable: ./events.exe
-    keyboardeventsll: false
+    keyboardevents: false
+    mouseevents: true
     shellevents: true
   driver:
     executable: ./driver.exe

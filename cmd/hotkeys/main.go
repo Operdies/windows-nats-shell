@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/operdies/windows-nats-shell/cmd/hotkeys/keymap"
-	"github.com/operdies/windows-nats-shell/pkg/keyboard"
+	"github.com/operdies/windows-nats-shell/pkg/hooks/keyboard"
 )
 
 func dumpTree(mods []uint32, bt *keymap.BindingTree) {
@@ -26,6 +26,6 @@ func main() {
 	// For simplicity, let's stick to subscribing for now.
 	// A windows hook event would allow us to avoid propagating handled events
 	hook, _ := keyboard.InstallHook(km.ProcessEvent)
-	defer keyboard.UninstallHook(hook)
+	defer hook.Uninstall()
 	select {}
 }

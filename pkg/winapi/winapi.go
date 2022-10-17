@@ -6,14 +6,16 @@ package winapi
 import (
 	"log"
 	"sync"
-	"syscall"
 	"unsafe"
 
+	"golang.org/x/sys/windows"
+
+	"github.com/operdies/windows-nats-shell/pkg/winapi/internal/winapicgo"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
 var (
-	user32 = syscall.MustLoadDLL("user32.dll")
+	user32 = windows.MustLoadDLL("user32.dll")
 
 	enumWindows              = user32.MustFindProc("EnumWindows")
 	getWindowTextW           = user32.MustFindProc("GetWindowTextW")
@@ -24,6 +26,9 @@ var (
 	getForegroundWindow      = user32.MustFindProc("GetForegroundWindow")
 	setForegroundWindow      = user32.MustFindProc("SetForegroundWindow")
 	showWindow               = user32.MustFindProc("ShowWindow")
+	getAncestor              = user32.MustFindProc("GetAncestor")
+	getWindow                = user32.MustFindProc("GetWindow")
+	getParent                = user32.MustFindProc("GetParent")
 	attachThreadInput        = user32.MustFindProc("AttachThreadInput")
 	getWindowThreadProcessId = user32.MustFindProc("GetWindowThreadProcessId")
 	systemParametersInfoA    = user32.MustFindProc("SystemParametersInfoA")
@@ -35,18 +40,38 @@ var (
 	setWinEventHook = user32.MustFindProc("SetWinEventHook")
 	unhookWinEvent  = user32.MustFindProc("UnhookWinEvent")
 
-	kernel             = syscall.MustLoadDLL("kernel32.dll")
+	kernel             = windows.MustLoadDLL("kernel32.dll")
 	getCurrentThreadId = kernel.MustFindProc("GetCurrentThreadId")
 	getModuleHandle    = kernel.MustFindProc("GetModuleHandleA")
 
 	getProcAddress = kernel.MustFindProc("GetProcAddress")
 
-	shell32       = syscall.MustLoadDLL("shell32.dll")
+	shell32       = windows.MustLoadDLL("shell32.dll")
 	shellExecuteA = shell32.MustFindProc("ShellExecuteA")
 
-	Shlwapi          = syscall.MustLoadDLL("Shlwapi.dll")
+	Shlwapi          = windows.MustLoadDLL("Shlwapi.dll")
 	assocQueryString = Shlwapi.MustFindProc("AssocQueryStringA")
 )
+
+func GetAncestor(hwnd wintypes.HWND, gaFlags wintypes.GA_FLAGS) wintypes.HWND {
+	parent, _, _ := getAncestor.Call(uintptr(hwnd), uintptr(gaFlags))
+	return wintypes.HWND(parent)
+
+}
+
+func GetWindow(hwnd wintypes.HWND, uCmd wintypes.GW_CMD) wintypes.HWND {
+	parent, _, _ := getWindow.Call(uintptr(hwnd), uintptr(uCmd))
+	return wintypes.HWND(parent)
+}
+
+func GetParent(hwnd wintypes.HWND) wintypes.HWND {
+	r, _, _ := getParent.Call(uintptr(hwnd))
+	return wintypes.HWND(r)
+}
+
+func WindowFromPoint(point wintypes.POINT) wintypes.HWND {
+	return winapicgo.WindowFromPoint(point)
+}
 
 func ShowWindow(hwnd wintypes.HWND, nCmdShow wintypes.N_CMD_SHOW) bool {
 	r, _, _ := showWindow.Call(uintptr(hwnd), uintptr(nCmdShow))
@@ -120,9 +145,12 @@ func SetForegroundWindow(hwnd wintypes.HWND) wintypes.BOOL {
 }
 
 func GetWindowText(hwnd wintypes.HWND, str *uint16, maxCount int32) (len int32, err error) {
-	// r0, _, e1 := syscall.SyscallN(getWindowTextW.Addr(), uintptr(hwnd), uintptr(unsafe.Pointer(str)), uintptr(maxCount))
+	// r0 is the number of copied characters
 	r0, _, e1 := getWindowTextW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(str)), uintptr(maxCount))
-	if r0 != 0 {
+	len = int32(r0)
+	if len > 0 {
+		err = nil
+	} else {
 		err = e1
 	}
 	return
@@ -146,7 +174,7 @@ func GetAllWindows() []wintypes.HWND {
 	allWindows.handles = make([]wintypes.HWND, 0)
 
 	if allWindows.callback == 0 {
-		allWindows.callback = syscall.NewCallback(
+		allWindows.callback = windows.NewCallback(
 			func(h wintypes.HWND, p wintypes.LPARAM) wintypes.LRESULT {
 				allWindows.handles = append(allWindows.handles, h)
 				return 1
@@ -156,17 +184,26 @@ func GetAllWindows() []wintypes.HWND {
 	return allWindows.handles
 }
 
+func GetWindowTextEasy(h wintypes.HWND) (str string, err error) {
+	b := make([]uint16, 200)
+	_, err = GetWindowText(h, &b[0], int32(len(b)))
+	if err != nil {
+		return "", err
+	}
+	str = windows.UTF16ToString(b)
+	return str, nil
+}
+
 func GetVisibleWindows() []wintypes.Window {
 	handles := GetAllWindows()
 	result := make([]wintypes.Window, len(handles))
-	b := make([]uint16, 200)
 	k := 0
 	focused := GetForegroundWindow()
 	for _, h := range handles {
 		if IsWindowVisible(h) {
-			_, err := GetWindowText(h, &b[0], int32(len(b)))
-			if err != nil {
-				result[k] = wintypes.Window{Handle: h, Title: syscall.UTF16ToString(b), IsFocused: h == focused}
+			title, err := GetWindowTextEasy(h)
+			if err == nil {
+				result[k] = wintypes.Window{Handle: h, Title: title, IsFocused: h == focused}
 				k += 1
 			}
 		}
@@ -226,6 +263,6 @@ func SystemParametersInfoA(uiAction uint, uiParam uint, pvParam wintypes.PVOID, 
 }
 
 func GetCurrentThreadId() wintypes.DWORD {
-	r0, _, _ := syscall.SyscallN(getCurrentThreadId.Addr())
+	r0, _, _ := getCurrentThreadId.Call()
 	return wintypes.DWORD(r0)
 }
