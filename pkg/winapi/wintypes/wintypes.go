@@ -1,6 +1,10 @@
 package wintypes
 
-import "unsafe"
+import (
+	"unsafe"
+
+	"golang.org/x/sys/windows"
+)
 
 // SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, SPIF_+UPDATEINIFILE)
 
@@ -41,18 +45,20 @@ type (
 )
 
 const (
-	SW_HIDE N_CMD_SHOW = 0
-	SW_SHOWNORMAL
-	SW_SHOWMINIMIZED
-	SW_SHOWMAZIMIZED
-	SW_SHOWNOACTIVATE
-	SW_SHOW
-	SW_MINIMIZE
-	SW_SHOWMINNOACTIVE
-	SW_SHOWNA
-	SW_RESTORE
-	SW_SHOWDEFAULT
-	SW_FORCEMINIMIZE
+	SW_HIDE            N_CMD_SHOW = 0
+	SW_SHOWNORMAL                 = 1
+	SW_NORMAL                     = 1
+	SW_SHOWMINIMIZED              = 2
+	SW_SHOWMAZIMIZED              = 3
+	SW_MAZIMIZED                  = 3
+	SW_SHOWNOACTIVATE             = 4
+	SW_SHOW                       = 5
+	SW_MINIMIZE                   = 6
+	SW_SHOWMINNOACTIVE            = 7
+	SW_SHOWNA                     = 8
+	SW_RESTORE                    = 9
+	SW_SHOWDEFAULT                = 10
+	SW_FORCEMINIMIZE              = 11
 )
 
 const (
@@ -75,6 +81,55 @@ const (
 	WINEVENT_INCONTEXT    = 4
 	TRUE                  = 1
 	FALSE                 = 0
+)
+
+type SWP = uint
+
+const (
+	//	If the calling thread and the thread that owns the window are attached to different input queues, the system posts the request to the thread that owns the window. This prevents the calling thread from blocking its execution while other threads process the request.
+	SWP_ASYNCWINDOWPOS SWP = 0x4000
+
+	//	Prevents generation of the WM_SYNCPAINT message.
+	SWP_DEFERERASE = 0x2000
+
+	//	Draws a frame (defined in the window's class description) around the window.
+	SWP_DRAWFRAME = 0x0020
+
+	//	Applies new frame styles set using the SetWindowLong function. Sends a WM_NCCALCSIZE message to the window, even if the window's size is not being changed. If this flag is not specified, WM_NCCALCSIZE is sent only when the window's size is being changed.
+	SWP_FRAMECHANGED = 0x0020
+
+	//	Hides the window.
+	SWP_HIDEWINDOW = 0x0080
+
+	//	Does not activate the window. If this flag is not set, the window is activated and moved to the top of either the topmost or non-topmost group (depending on the setting of the hWndInsertAfter parameter).
+	SWP_NOACTIVATE = 0x0010
+
+	//	Discards the entire contents of the client area. If this flag is not specified, the valid contents of the client area are saved and copied back into the client area after the window is sized or repositioned.
+	SWP_NOCOPYBITS = 0x0100
+
+	//	Retains the current position (ignores X and Y parameters).
+	SWP_NOMOVE = 0x0002
+
+	//	Does not change the owner window's position in the Z order.
+	SWP_NOOWNERZORDER = 0x0200
+
+	//	Does not redraw changes. If this flag is set, no repainting of any kind occurs. This applies to the client area, the nonclient area (including the title bar and scroll bars), and any part of the parent window uncovered as a result of the window being moved. When this flag is set, the application must explicitly invalidate or redraw any parts of the window and parent window that need redrawing.
+	SWP_NOREDRAW = 0x0008
+
+	//	Same as the SWP_NOOWNERZORDER flag.
+	SWP_NOREPOSITION = 0x0200
+
+	//	Prevents the window from receiving the WM_WINDOWPOSCHANGING message.
+	SWP_NOSENDCHANGING = 0x0400
+
+	//	Retains the current size (ignores the cx and cy parameters).
+	SWP_NOSIZE = 0x0001
+
+	//	Retains the current Z order (ignores the hWndInsertAfter parameter).
+	SWP_NOZORDER = 0x0004
+
+	//	Displays the window.
+	SWP_SHOWWINDOW = 0x0040
 )
 
 func SUCCEEDED(code HRESULT) bool {
@@ -146,8 +201,32 @@ type Window struct {
 	ZOrder    int
 }
 
+type RECT2 = windows.Rect
+type RECT struct {
+	Left   int32
+	Top    int32
+	Right  int32
+	Bottom int32
+}
+
+func (r RECT) Transform(x, y int32) RECT {
+	return RECT{
+		Left:   r.Left + x,
+		Right:  r.Right + x,
+		Top:    r.Top + y,
+		Bottom: r.Bottom + y,
+	}
+}
+
 type POINT struct {
 	X, Y LONG
+}
+
+func (p POINT) Add(p2 POINT) POINT {
+	return POINT{X: p.X + p2.X, Y: p.Y + p2.Y}
+}
+func (p POINT) Sub(p2 POINT) POINT {
+	return POINT{X: p.X - p2.X, Y: p.Y - p2.Y}
 }
 
 type GW_CMD = uint

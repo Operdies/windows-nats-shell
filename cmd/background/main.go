@@ -10,9 +10,9 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/operdies/windows-nats-shell/cmd/background/colors"
 	"github.com/operdies/windows-nats-shell/cmd/background/gfx"
-	"github.com/operdies/windows-nats-shell/cmd/background/windowhelper"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/windowmanager"
 )
 
 func init() {
@@ -124,20 +124,20 @@ func main() {
 	render := make(chan bool)
 
 	_, err = nc.Subscribe.WH_SHELL(func(ci shell.ShellEventInfo) {
-		windowhelper.SetBottomMost(hwnd)
+		windowmanager.SetBottomMost(hwnd)
 		render <- true
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	windowhelper.MakeToolWindow(hwnd)
-	windowhelper.SetBottomMost(hwnd)
+	windowmanager.MakeToolWindow(hwnd)
+	windowmanager.SetBottomMost(hwnd)
 	window.SetMouseButtonCallback(func(w *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
 		// Writing to a channel seems to cause a deadlock.
 		// It works fine when doing it from a goroutine. Strange
 		go func() {
-			windowhelper.SetBottomMost(hwnd)
+			windowmanager.SetBottomMost(hwnd)
 			render <- true
 		}()
 	})

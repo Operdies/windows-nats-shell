@@ -43,6 +43,7 @@ func Default() Client {
 	}
 	return c
 }
+
 func New(url string, timeout time.Duration) (c Client, err error) {
 	nc, err := nats.Connect(url)
 	if err != nil {

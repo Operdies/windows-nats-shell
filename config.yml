@@ -12,7 +12,7 @@ services:
   events:
     executable: ./events.exe
     keyboardevents: false
-    mouseevents: true
+    mouseevents: false
     shellevents: true
   driver:
     executable: ./driver.exe
@@ -58,5 +58,6 @@ services:
       - keys: pause 
         actions: 
           - nats:
-              subject: System.LaunchProgram 
-              payload: Google Chrome.lnk
+              subject: Window.ToggleBorder 
+  windowmanager:
+    executable: ./windowmanager.exe

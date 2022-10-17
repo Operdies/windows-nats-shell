@@ -16,6 +16,7 @@ import (
 	"github.com/operdies/windows-nats-shell/pkg/utils/filewatcher"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/screen"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/windowmanager"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
 )
 
@@ -32,15 +33,6 @@ type config struct {
 	}
 }
 
-func superFocusStealer(handle wintypes.HWND) wintypes.BOOL {
-	// We should probably reset this...
-	winapi.SystemParametersInfoA(wintypes.SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, wintypes.SPIF_SENDCHANGE)
-	// winapi.ShowWindow(handle, wintypes.SW_RESTORE)
-	success := winapi.SetForegroundWindow(handle)
-
-	return success
-}
-
 func ListenIndefinitely() {
 	nc := client.Default()
 	defer nc.Close()
@@ -50,7 +42,7 @@ func ListenIndefinitely() {
 	indexItems(cfg)
 
 	// Ensure windows are computed and published at most once per second
-	batchedPublish := utils.Batcher(func() { nc.Publish.WindowsUpdated(winapi.GetVisibleWindows()) },
+	batchedPublish := utils.Batcher(func() { nc.Publish.WindowsUpdated(windowmanager.GetVisibleWindows()) },
 		time.Millisecond*100, time.Millisecond*500)
 
 	nc.Subscribe.WH_SHELL(func(e shell.ShellEventInfo) {
@@ -68,7 +60,7 @@ func ListenIndefinitely() {
 		}
 	})
 
-	nc.Subscribe.GetWindows(winapi.GetVisibleWindows)
+	nc.Subscribe.GetWindows(windowmanager.GetVisibleWindows)
 
 	nc.Subscribe.IsWindowFocused(func(h wintypes.HWND) bool {
 		current := winapi.GetForegroundWindow()
@@ -76,7 +68,7 @@ func ListenIndefinitely() {
 	})
 
 	nc.Subscribe.SetFocus(func(h wintypes.HWND) bool {
-		return superFocusStealer(h) == 1
+		return winapi.SuperFocusStealer(h)
 	})
 
 	nc.Subscribe.GetPrograms(func() []string {
@@ -112,6 +104,24 @@ func ListenIndefinitely() {
 	})
 	nc.Subscribe.SetResolution(func(r screenApi.Resolution) error {
 		return screen.SetResolution(r)
+	})
+	nc.Subscribe.HideBorder(func(h wintypes.HWND) bool {
+		if h == 0 {
+			h = winapi.GetForegroundWindow()
+		}
+		return windowmanager.HideBorder(h)
+	})
+	nc.Subscribe.ShowBorder(func(h wintypes.HWND) bool {
+		if h == 0 {
+			h = winapi.GetForegroundWindow()
+		}
+		return windowmanager.ShowBorder(h)
+	})
+	nc.Subscribe.ToggleBorder(func(h wintypes.HWND) bool {
+		if h == 0 {
+			h = winapi.GetForegroundWindow()
+		}
+		return windowmanager.ToggleBorder(h)
 	})
 	select {}
 }

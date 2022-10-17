@@ -17,7 +17,9 @@ import (
 var (
 	user32 = windows.MustLoadDLL("user32.dll")
 
+	setWindowPos             = user32.MustFindProc("SetWindowPos")
 	enumWindows              = user32.MustFindProc("EnumWindows")
+	getWindowRect            = user32.MustFindProc("GetWindowRect")
 	getWindowTextW           = user32.MustFindProc("GetWindowTextW")
 	isWindowVisible          = user32.MustFindProc("IsWindowVisible")
 	setWindowsHookExA        = user32.MustFindProc("SetWindowsHookExA")
@@ -52,6 +54,19 @@ var (
 	Shlwapi          = windows.MustLoadDLL("Shlwapi.dll")
 	assocQueryString = Shlwapi.MustFindProc("AssocQueryStringA")
 )
+
+func SetWindowPos(hwnd wintypes.HWND, hwndInsertAfter wintypes.HWND, X, Y, cx, cy int, flags wintypes.SWP) error {
+	r, _, err := setWindowPos.Call(uintptr(hwnd), uintptr(hwndInsertAfter), uintptr(X), uintptr(Y), uintptr(cx), uintptr(cy), uintptr(flags))
+	if r != 0 {
+		return err
+	}
+	return nil
+}
+
+func GetWindowRect(hwnd wintypes.HWND) (rect wintypes.RECT) {
+	getWindowRect.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&rect)))
+	return rect
+}
 
 func GetAncestor(hwnd wintypes.HWND, gaFlags wintypes.GA_FLAGS) wintypes.HWND {
 	parent, _, _ := getAncestor.Call(uintptr(hwnd), uintptr(gaFlags))
@@ -139,9 +154,12 @@ func GetForegroundWindow() wintypes.HWND {
 	return wintypes.HWND(res)
 }
 
-func SetForegroundWindow(hwnd wintypes.HWND) wintypes.BOOL {
-	res, _, _ := setForegroundWindow.Call(uintptr(hwnd))
-	return wintypes.BOOL(res)
+func SetForegroundWindow(hwnd wintypes.HWND) (bool, error) {
+	res, _, err := setForegroundWindow.Call(uintptr(hwnd))
+	if res == 1 {
+		return true, nil
+	}
+	return false, err
 }
 
 func GetWindowText(hwnd wintypes.HWND, str *uint16, maxCount int32) (len int32, err error) {
@@ -182,34 +200,6 @@ func GetAllWindows() []wintypes.HWND {
 	}
 	EnumWindows(allWindows.callback, 0)
 	return allWindows.handles
-}
-
-func GetWindowTextEasy(h wintypes.HWND) (str string, err error) {
-	b := make([]uint16, 200)
-	_, err = GetWindowText(h, &b[0], int32(len(b)))
-	if err != nil {
-		return "", err
-	}
-	str = windows.UTF16ToString(b)
-	return str, nil
-}
-
-func GetVisibleWindows() []wintypes.Window {
-	handles := GetAllWindows()
-	result := make([]wintypes.Window, len(handles))
-	k := 0
-	focused := GetForegroundWindow()
-	for i, h := range handles {
-		if IsWindowVisible(h) {
-			title, err := GetWindowTextEasy(h)
-			if err == nil {
-				result[k] = wintypes.Window{Handle: h, Title: title, IsFocused: h == focused, ZOrder: i}
-				k += 1
-			}
-		}
-	}
-
-	return result[:k]
 }
 
 func SetWindowsHookExW(idHook wintypes.WH_EVENTTYPE, lpfn uintptr, hInstance wintypes.HINSTANCE, threadId wintypes.DWORD) wintypes.HHOOK {
@@ -265,4 +255,12 @@ func SystemParametersInfoA(uiAction uint, uiParam uint, pvParam wintypes.PVOID, 
 func GetCurrentThreadId() wintypes.DWORD {
 	r0, _, _ := getCurrentThreadId.Call()
 	return wintypes.DWORD(r0)
+}
+
+func SuperFocusStealer(handle wintypes.HWND) bool {
+	SystemParametersInfoA(wintypes.SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, wintypes.SPIF_SENDCHANGE)
+	// it seems ShowWindow hides windows when explorer.exe isn't running, regardless of the argument verb
+	success, _ := SetForegroundWindow(handle)
+
+	return success
 }

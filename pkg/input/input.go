@@ -4,6 +4,7 @@ type VKEY uint32
 
 var (
 	VK_MAP = map[string]VKEY{
+		"nullkey":   255,
 		"backspace": VK_BACK,
 		"tab":       VK_TAB,
 		"return":    VK_RETURN,

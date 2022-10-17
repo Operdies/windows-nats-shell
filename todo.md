@@ -44,6 +44,11 @@ Some (toggle-able) way to automatically tile windows. BSPC inspired layouts
 Cycle between avant-garde fanning strategy, tall mode, and monocle mode
 Disable borders on all windows (maybe with hotkey to enable currently focused window?)
 Mouse controls to resize / reposition windows (win+left/right drag)
+> ShowWindow(hwnd, SW_XXX) doesn't work 
+ShowWindow always hides ths window specified by hwnd, and I can't even figure out how to get the window back.
+It doesn't seem to happen when explorer.exe is running, so this is likely something handled by the windows shell 
+Figure out how to handle this, or what low-level APIs to replace the calls with 
+Also figure out how to rescue a hidden window in case a 3rd party app calls ShowWindow?
 
 ## Steam integration
 
