@@ -16,7 +16,7 @@ import (
 	"github.com/operdies/windows-nats-shell/pkg/utils/filewatcher"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/screen"
-	"github.com/operdies/windows-nats-shell/pkg/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
 )
 
 type config struct {
@@ -126,8 +126,9 @@ func startDetachedProcess(proc string, admin bool) error {
 	const sw_shownormal = 1
 	procPtr := strPtr(proc)
 	var verbPtr wintypes.LPCSTR = 0
+	verb := `open`
 	if admin {
-		verb := `runas`
+		verb = `runas`
 		verbPtr = strPtr(verb)
 	}
 	_, err := winapi.ShellExecute(0, verbPtr, procPtr, 0, 0, sw_shownormal)

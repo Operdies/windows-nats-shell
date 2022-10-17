@@ -54,6 +54,12 @@ Investigate what integrations exist / are possible
 
 Would make the shell usable without a linux driver. The shortcut manager needs to support input/output. Then the rofi implementation can respond using nats
 
+## Bugs 
+
+* Processes created with `driver`'s `System.LaunchProgram` will run as admin if `driver` is running as admin.
+- Consider if we need a full-blown CreateProcess implementation which mines the registry and properly controls inherited handles
+* `driver` cannot open e.g. a `.png` file after we switched to `ShellExecute`.
+
 ## Thought cabinet
 
 > Service namespaces?

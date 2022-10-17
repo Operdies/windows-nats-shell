@@ -7,7 +7,7 @@ import (
 import (
 	"unsafe"
 
-	"github.com/operdies/windows-nats-shell/pkg/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
 )
 
 var (

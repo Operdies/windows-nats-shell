@@ -6,7 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
-	"github.com/operdies/windows-nats-shell/pkg/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
 )
 
 type _MSLLHOOKSTRUCT struct {

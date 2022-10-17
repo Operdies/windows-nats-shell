@@ -7,7 +7,7 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/operdies/windows-nats-shell/pkg/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
 )
 
 func WindowFromPoint(point wintypes.POINT) wintypes.HWND {

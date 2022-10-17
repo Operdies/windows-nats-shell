@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/windows"
 
 	"github.com/operdies/windows-nats-shell/pkg/winapi/internal/winapicgo"
-	"github.com/operdies/windows-nats-shell/pkg/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
 )
 
 var (
