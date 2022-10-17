@@ -143,6 +143,7 @@ type Window struct {
 	Title     string
 	Handle    HWND
 	IsFocused bool
+	ZOrder    int
 }
 
 type POINT struct {

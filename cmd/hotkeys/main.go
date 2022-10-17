@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/operdies/windows-nats-shell/cmd/hotkeys/keymap"
-	"github.com/operdies/windows-nats-shell/pkg/hooks/keyboard"
+	"github.com/operdies/windows-nats-shell/pkg/input/keyboard"
 )
 
 func dumpTree(mods []uint32, bt *keymap.BindingTree) {

@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/nats-io/nats.go"
-	"github.com/operdies/windows-nats-shell/pkg/hooks/keyboard"
-	"github.com/operdies/windows-nats-shell/pkg/hooks/mouse"
+	"github.com/operdies/windows-nats-shell/pkg/input/keyboard"
+	"github.com/operdies/windows-nats-shell/pkg/input/mouse"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/utils"
 )

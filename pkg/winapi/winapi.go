@@ -199,11 +199,11 @@ func GetVisibleWindows() []wintypes.Window {
 	result := make([]wintypes.Window, len(handles))
 	k := 0
 	focused := GetForegroundWindow()
-	for _, h := range handles {
+	for i, h := range handles {
 		if IsWindowVisible(h) {
 			title, err := GetWindowTextEasy(h)
 			if err == nil {
-				result[k] = wintypes.Window{Handle: h, Title: title, IsFocused: h == focused}
+				result[k] = wintypes.Window{Handle: h, Title: title, IsFocused: h == focused, ZOrder: i}
 				k += 1
 			}
 		}
