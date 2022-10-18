@@ -1,6 +1,8 @@
 package inputhandler
 
 import (
+	"fmt"
+
 	"github.com/operdies/windows-nats-shell/pkg/input"
 	"github.com/operdies/windows-nats-shell/pkg/input/keyboard"
 	"github.com/operdies/windows-nats-shell/pkg/input/mouse"
@@ -12,40 +14,24 @@ import (
 
 var actionKey = input.VK_MAP["nullkey"]
 
-type mouseButtonState struct {
-	lButtonDown bool
-	rButtonDown bool
-}
-
 type InputHandler struct {
-	keyMods         map[input.VKEY]bool
-	mouseMods       mouseButtonState
-	resizeEventInfo resizeEventInfo
-	dragEventInfo   dragEventInfo
+	keyMods   map[input.VKEY]bool
+	eventInfo eventInfo
 }
 
-type resizeEventInfo struct {
+type eventInfo struct {
 	// The mouse event which triggered the resize
 	trigger mouse.MouseEventInfo
-	// Is the event currently active
-	active bool
+	// are we currently dragging
+	dragging bool
+	// are we currently resizing
+	resizing bool
 	// The resizing handle
 	resizeDirection windows.WindowCardinals
 	// The window handle
 	handle wintypes.HWND
 	// The initial configuration of the window
 	startPosition wintypes.RECT
-}
-
-type dragEventInfo struct {
-	// The mouse event which triggered the move
-	trigger mouse.MouseEventInfo
-	// Is the event currently active
-	active bool
-	// The starting position of the window
-	startPosition wintypes.RECT
-	// The window handle
-	handle wintypes.HWND
 }
 
 func CreateInputHandler() *InputHandler {
@@ -91,17 +77,27 @@ func (k *InputHandler) OnKeyboardInput(kei keyboard.KeyboardEventInfo) bool {
 	return vkey == actionKey
 }
 
-func (h *InputHandler) resizeStart(mei mouse.MouseEventInfo) {
+func getRootOwnerAtPoint(mei mouse.MouseEventInfo) wintypes.HWND {
 	subject := winapi.WindowFromPoint(mei.Point)
 	if subject == 0 {
-		return
+		return 0
 	}
+	rootOwner := winapi.GetAncestor(subject, wintypes.GA_ROOTOWNER)
+	if rootOwner != 0 {
+		subject = rootOwner
+	}
+
+	return subject
+}
+
+func (h *InputHandler) resizeStart(mei mouse.MouseEventInfo) {
+	subject := getRootOwnerAtPoint(mei)
 
 	rect := winapi.GetWindowRect(subject)
 	corner := windows.GetNearestCardinal(mei.Point, rect)
 
-	h.resizeEventInfo = resizeEventInfo{
-		active:          true,
+	h.eventInfo = eventInfo{
+		resizing:        true,
 		trigger:         mei,
 		resizeDirection: corner,
 		handle:          subject,
@@ -109,9 +105,9 @@ func (h *InputHandler) resizeStart(mei mouse.MouseEventInfo) {
 	}
 }
 func applyResize(h *InputHandler, p wintypes.POINT) {
-	delta := h.resizeEventInfo.trigger.Point.Sub(p)
-	d := h.resizeEventInfo.resizeDirection
-	r := h.resizeEventInfo.startPosition
+	delta := h.eventInfo.trigger.Point.Sub(p)
+	d := h.eventInfo.resizeDirection
+	r := h.eventInfo.startPosition
 	if d&windows.Top > 0 {
 		r.Top -= int32(delta.Y)
 	}
@@ -124,26 +120,24 @@ func applyResize(h *InputHandler, p wintypes.POINT) {
 	if d&windows.Right > 0 {
 		r.Right -= int32(delta.X)
 	}
-	windowmanager.SetWindowRect(h.resizeEventInfo.handle, r)
+	windowmanager.SetWindowRect(h.eventInfo.handle, r)
 }
 func (h *InputHandler) resizing(mei mouse.MouseEventInfo) {
 	applyResize(h, mei.Point)
 }
 func (h *InputHandler) resizeEnd(mei mouse.MouseEventInfo) {
-	applyResize(h, mei.Point)
-	h.resizeEventInfo.active = false
+	h.resizing(mei)
+	h.eventInfo.resizing = false
 }
 
 func (h *InputHandler) dragStart(mei mouse.MouseEventInfo) {
-	subject := winapi.WindowFromPoint(mei.Point)
+	subject := getRootOwnerAtPoint(mei)
 	if subject == 0 {
 		return
 	}
 	rect := winapi.GetWindowRect(subject)
-	h.dragEventInfo.active = true
-	h.dragEventInfo.trigger = mei
-	h.dragEventInfo = dragEventInfo{
-		active:        true,
+	h.eventInfo = eventInfo{
+		dragging:      true,
 		trigger:       mei,
 		handle:        subject,
 		startPosition: rect,
@@ -151,54 +145,59 @@ func (h *InputHandler) dragStart(mei mouse.MouseEventInfo) {
 }
 
 func applyMove(h *InputHandler, p wintypes.POINT) {
-	// delta := h.dragEventInfo.trigger.Point.Sub(p)
-	// r := h.dragEventInfo.startPosition.Transform(-int32(delta.X), -int32(delta.Y))
-	// windowmanager.SetWindowRect(h.dragEventInfo.handle, r)
+	// delta := h.resizeEventInfo.trigger.Point.Sub(p)
+	// r := h.resizeEventInfo.startPosition.Transform(-int32(delta.X), -int32(delta.Y))
+	// windowmanager.SetWindowRect(h.resizeEventInfo.handle, r)
 
-	delta := h.dragEventInfo.trigger.Point.Sub(p)
-	startPoint := wintypes.POINT{X: wintypes.LONG(h.dragEventInfo.startPosition.Left), Y: wintypes.LONG(h.dragEventInfo.startPosition.Top)}
+	delta := h.eventInfo.trigger.Point.Sub(p)
+	startPoint := wintypes.POINT{X: wintypes.LONG(h.eventInfo.startPosition.Left), Y: wintypes.LONG(h.eventInfo.startPosition.Top)}
 	target := startPoint.Sub(delta)
-	windowmanager.MoveWindow(h.dragEventInfo.handle, target)
+	windowmanager.MoveWindow(h.eventInfo.handle, target)
 }
 
 func (h *InputHandler) dragging(mei mouse.MouseEventInfo) {
 	applyMove(h, mei.Point)
 }
 func (h *InputHandler) dragEnd(mei mouse.MouseEventInfo) {
-	applyMove(h, mei.Point)
-	h.dragEventInfo.active = false
+	h.dragging(mei)
+	h.eventInfo.dragging = false
+}
+
+func (h *InputHandler) printMouseover(mei mouse.MouseEventInfo) {
+	subject := winapi.WindowFromPoint(mei.Point)
+	rootOwner := winapi.GetAncestor(subject, wintypes.GA_ROOTOWNER)
+	windowTitle, _ := windowmanager.GetWindowTextEasy(subject)
+	fmt.Printf("subject %v) %v\n", subject, windowTitle)
+	windowTitle, _ = windowmanager.GetWindowTextEasy(rootOwner)
+	fmt.Printf("subject owner %v) %v\n", rootOwner, windowTitle)
 }
 
 func (h *InputHandler) OnMouseInput(mei mouse.MouseEventInfo) bool {
 	switch mei.Action {
 	case mouse.LBUTTONDOWN:
-		h.mouseMods.lButtonDown = true
-		if state, ok := h.keyMods[actionKey]; ok && state && !h.resizeEventInfo.active {
+		if state, ok := h.keyMods[actionKey]; ok && state && !h.eventInfo.resizing {
 			h.dragStart(mei)
 			return true
 		}
 	case mouse.LBUTTONUP:
-		h.mouseMods.lButtonDown = false
-		if h.dragEventInfo.active {
+		if h.eventInfo.dragging {
 			h.dragEnd(mei)
 			return true
 		}
 	case mouse.RBUTTONDOWN:
-		if state, ok := h.keyMods[actionKey]; ok && state && !h.dragEventInfo.active {
+		if state, ok := h.keyMods[actionKey]; ok && state && !h.eventInfo.dragging {
 			h.resizeStart(mei)
 			return true
 		}
-		h.mouseMods.rButtonDown = true
 	case mouse.RBUTTONUP:
-		h.mouseMods.rButtonDown = false
-		if h.resizeEventInfo.active {
+		if h.eventInfo.resizing {
 			h.resizeEnd(mei)
 			return true
 		}
 	case mouse.MOUSEMOVE:
-		if h.dragEventInfo.active {
+		if h.eventInfo.dragging {
 			h.dragging(mei)
-		} else if h.resizeEventInfo.active {
+		} else if h.eventInfo.resizing {
 			h.resizing(mei)
 		}
 	case mouse.VMOUSEWHEEL:
