@@ -1,5 +1,12 @@
 package input
 
+import (
+	"sync"
+
+	"github.com/operdies/windows-nats-shell/pkg/winapi"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
+)
+
 type VKEY uint32
 
 var (
@@ -142,3 +149,29 @@ const (
 	VK_LMENU    = 0xA4
 	VK_RMENU    = 0xA5
 )
+
+var (
+	flushCounter = 0
+	mut          = sync.Mutex{}
+)
+
+func flushWhileNeeded() {
+	var msg *wintypes.MSG
+	for flushCounter > 0 {
+		result := winapi.GetMessage(&msg, 0, 0, 0)
+		// Ignore any errors
+		if result > 0 {
+			winapi.TranslateMessage(&msg)
+			winapi.DispatchMessageW(&msg)
+		}
+	}
+}
+
+func KeepMessageQueuesFlushed(n int) {
+	mut.Lock()
+	defer mut.Unlock()
+	flushCounter += n
+	if flushCounter > 0 {
+		go flushWhileNeeded()
+	}
+}

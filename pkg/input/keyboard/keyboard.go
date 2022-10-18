@@ -5,6 +5,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/operdies/windows-nats-shell/pkg/input"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
 )
@@ -79,19 +80,7 @@ func InstallHook(cb func(KeyboardEventInfo) bool) (hook *KeyboardHook, err error
 		return
 	}
 
-	go func() {
-		// Indefinitely process events
-		// Otherwise, KeyboardEventsLl won't fire
-		var msg *wintypes.MSG
-		for hk.hook != 0 {
-			result := winapi.GetMessage(&msg, 0, 0, 0)
-			// Ignore any errors
-			if result > 0 {
-				winapi.TranslateMessage(&msg)
-				winapi.DispatchMessageW(&msg)
-			}
-		}
-	}()
+	input.KeepMessageQueuesFlushed(1)
 
 	hook = &hk
 	return
@@ -100,5 +89,6 @@ func InstallHook(cb func(KeyboardEventInfo) bool) (hook *KeyboardHook, err error
 func (k *KeyboardHook) Uninstall() error {
 	winapi.UnhookWindowsHookEx(wintypes.HHOOK(k.hook))
 	k.hook = 0
+	input.KeepMessageQueuesFlushed(-1)
 	return nil
 }
