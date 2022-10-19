@@ -41,14 +41,22 @@ API for posting data (images or text) to the background. TBD: pre-configured zon
 ## Window manager
 
 Some (toggle-able) way to automatically tile windows. BSPC inspired layouts
-Cycle between avant-garde fanning strategy, tall mode, and monocle mode
+Cycle between revolver strategy, tall mode, and monocle mode -- revolver with max size is monocle..
 Disable borders on all windows (maybe with hotkey to enable currently focused window?)
-Mouse controls to resize / reposition windows (win+left/right drag)
-> ShowWindow(hwnd, SW_XXX) doesn't work 
-ShowWindow always hides ths window specified by hwnd, and I can't even figure out how to get the window back.
-It doesn't seem to happen when explorer.exe is running, so this is likely something handled by the windows shell 
-Figure out how to handle this, or what low-level APIs to replace the calls with 
-Also figure out how to rescue a hidden window in case a 3rd party app calls ShowWindow?
+
+* Add generic rectangle animation
+  - e.g. RECT.Animate(to RECT, steps int) []RECT
+* Cancel window animations when a new animation is initiated
+* Add non-linear animation steps to make them appear more snazzy
+* add toggle for auto-layout
+* swap main / secondary windows when a window is manually switched (alt-tab or click)
+  - Respect manual order overrides when manually swapping
+* Highlight border of focused window 
+* Avoid removing borders from windows that don't have a border in the first place (chrome, steam) -- figure out how to detect this?
+
+* Make abstractions more sane -- inputhandler duplicates hotkey functionality
+* a lot of `cmd/*` code is generic and could be moved to a suitable package
+
 
 ## Steam integration
 
@@ -86,3 +94,7 @@ Should all e.g. Windows APIs require a window as input? If an action only requir
 More generally, should all X apis take an input of the same form as their outputs? It would make it possible to return meaningful errors.
 Rofi integration is a prerequisite for this, because the alternative is way too complicated on the scripting side.
 
+> Current implementation is extremely windows 
+
+We don't need full windows support, but it would be nice if the project was structured such that platform dependent parts were neatly separated 
+so the project can at least compile

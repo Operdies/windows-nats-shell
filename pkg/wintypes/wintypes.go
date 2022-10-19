@@ -1,6 +1,7 @@
 package wintypes
 
 import (
+	"math"
 	"unsafe"
 )
 
@@ -233,6 +234,71 @@ func (r RECT) Transform(x, y int32) RECT {
 		Top:    r.Top + y,
 		Bottom: r.Bottom + y,
 	}
+}
+
+func (r RECT) Width() int32 {
+	return r.Right - r.Left
+}
+
+func (r RECT) Height() int32 {
+	return r.Bottom - r.Top
+}
+
+func (r RECT) CenterAround(other POINT) RECT {
+	rect := RECT{
+		Left:   int32(other.X),
+		Right:  int32(other.X),
+		Top:    int32(other.Y),
+		Bottom: int32(other.Y),
+	}
+	return r.CenterIn(rect)
+}
+
+// Given a number between 0 and 1, get a corresponding point
+// on the rectangle perimeter such that 0 and 1 is the center of the top line,
+// 0 and 1 is the center of the top line
+// 0.125 is the top right corner
+// 0.375 is the bottom right corner
+// 0.625 is the bottom left corner
+// 0.875 is the top left corner
+func (r RECT) GetPointOnPerimeter(point float64) POINT {
+	// put point in the range 0 <= point < 1
+	point = point - math.Floor(point)
+	rad := point * math.Pi * 2
+	sin := math.Sin(rad)
+	cos := math.Cos(rad)
+
+	// Extrapolate the point on the circle onto the closest side of the surrounding square
+	factor := 1.0 / math.Max(math.Abs(cos), math.Abs(sin))
+	cos *= factor
+	sin *= factor
+
+	return POINT{
+		X: LONG(r.Left) + (LONG(r.Width()/2) + LONG(math.Round(sin*float64(r.Width()/2)))),
+		Y: LONG(r.Top) + (LONG(r.Height()/2) - LONG(math.Round(cos*float64(r.Height()/2)))),
+	}
+}
+
+func (r RECT) CenterIn(other RECT) RECT {
+	otherHalfWidth := other.Width() / 2
+	rHalfWidth := r.Width() / 2
+	otherHalfHeight := other.Height() / 2
+	rHalfHeight := r.Height() / 2
+	return RECT{
+		Left:   other.Left + (otherHalfWidth - rHalfWidth),
+		Right:  other.Left + (otherHalfWidth + rHalfWidth),
+		Top:    other.Top + (otherHalfHeight - rHalfHeight),
+		Bottom: other.Top + (otherHalfHeight + rHalfHeight),
+	}
+}
+
+func (r RECT) Scale(factor float64) RECT {
+	centered := r.CenterIn(RECT{0, 0, 0, 0})
+	centered.Left = int32(factor * float64(centered.Left))
+	centered.Right = int32(factor * float64(centered.Right))
+	centered.Top = int32(factor * float64(centered.Top))
+	centered.Bottom = int32(factor * float64(centered.Bottom))
+	return centered.CenterIn(r)
 }
 
 type POINT struct {

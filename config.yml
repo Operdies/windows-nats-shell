@@ -69,3 +69,5 @@ services:
     layout: revolver
     actionkey: nullkey
     cyclekey: alt
+    gap: 0.1
+    ratio: 0.90

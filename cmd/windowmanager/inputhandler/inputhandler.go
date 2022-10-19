@@ -2,27 +2,21 @@ package inputhandler
 
 import (
 	"fmt"
-	"sort"
 
+	"github.com/operdies/windows-nats-shell/cmd/windowmanager/windowmanager"
 	"github.com/operdies/windows-nats-shell/pkg/input"
 	"github.com/operdies/windows-nats-shell/pkg/input/keyboard"
 	"github.com/operdies/windows-nats-shell/pkg/input/mouse"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
-	"github.com/operdies/windows-nats-shell/pkg/utils/query"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/winapiabstractions"
+	wia "github.com/operdies/windows-nats-shell/pkg/winapi/winapiabstractions"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
-)
-
-var (
-	actionKey    = input.VK_MAP["nullkey"]
-	ignored      = map[string]bool{"Background": true}
-	ignoredCache = map[wintypes.HWND]bool{}
 )
 
 type InputHandler struct {
 	keyMods   map[input.VKEY]bool
 	eventInfo eventInfo
+	wm        *windowmanager.WindowManager
 }
 
 type eventInfo struct {
@@ -40,70 +34,17 @@ type eventInfo struct {
 	startPosition wintypes.RECT
 }
 
-func CreateInputHandler() *InputHandler {
+func Create(wm *windowmanager.WindowManager) *InputHandler {
 	var handler InputHandler
 	handler.keyMods = map[input.VKEY]bool{}
+	handler.wm = wm
 
 	return &handler
 }
 
 type direction int
 
-const (
-	Next     direction = 1
-	Previous           = 2
-)
-
-func isIgnored(hwnd wintypes.HWND) bool {
-	if hwnd == 0 {
-		return true
-	}
-	v, ok := ignoredCache[hwnd]
-	if ok && v {
-		return true
-	}
-	title, _ := winapiabstractions.GetWindowTextEasy(hwnd)
-	v, ok = ignored[title]
-	ignoredCache[hwnd] = v && ok
-	return v && ok
-}
-
-func SelectSibling(siblingOf wintypes.HWND, dir direction) {
-	if isIgnored(siblingOf) {
-		return
-	}
-	windows := winapiabstractions.GetVisibleWindows()
-	handles := query.Select(windows, func(w wintypes.Window) wintypes.HWND { return w.Handle })
-	handles = query.Filter(handles, func(hwnd wintypes.HWND) bool { return !isIgnored(hwnd) })
-	// Ensure the handles are always ordered the same way
-	sort.Slice(handles, func(i, j int) bool {
-		return handles[i] < handles[j]
-	})
-	// Reverse the array to cycle backwards instead of forwards
-	if dir == Previous {
-		for i, j := 0, len(handles)-1; i < j; i, j = i+1, j-1 {
-			handles[i], handles[j] = handles[j], handles[i]
-		}
-	}
-
-	// Remove 'siblingOf' from the list, and rearrange the list
-	for i, w := range handles {
-		if w == siblingOf {
-			handles = append(handles[i+1:], handles[:i]...)
-			break
-		}
-	}
-
-	for _, w := range handles {
-		success := winapi.SuperFocusStealer(w)
-		if success {
-			return
-		}
-	}
-
-}
-
-func (k *InputHandler) OnKeyboardInput(kei keyboard.KeyboardEventInfo) bool {
+func (h *InputHandler) OnKeyboardInput(kei keyboard.KeyboardEventInfo) bool {
 	// We can't differentiate presses and holds from the event info.
 	// But we know it's a hold if the key is already mapped in activeMods
 	keyDown := kei.TransitionState == false
@@ -112,12 +53,25 @@ func (k *InputHandler) OnKeyboardInput(kei keyboard.KeyboardEventInfo) bool {
 	vkey := input.VKEY(kei.VirtualKeyCode)
 	// Clear the keymap when escape is pressed
 	if vkey == input.VK_ESCAPE {
-		k.keyMods = map[input.VKEY]bool{}
+		h.keyMods = map[input.VKEY]bool{}
 		return false
 	}
 
-	k.keyMods[vkey] = keyDown
-	return vkey == actionKey
+	if keyDown && vkey == h.wm.Config.CycleVKey && h.actionKeyDown() {
+		h.wm.PrevWindow(0)
+		return true
+	}
+
+	h.keyMods[vkey] = keyDown
+	return vkey == h.wm.Config.ActionVKey
+}
+
+func (h *InputHandler) actionKeyDown() bool {
+	return h.isKeyDown(h.wm.Config.ActionVKey)
+}
+func (h *InputHandler) isKeyDown(key input.VKEY) bool {
+	down, ok := h.keyMods[key]
+	return ok && down
 }
 
 func getRootOwnerAtPoint(mei mouse.MouseEventInfo) wintypes.HWND {
@@ -138,7 +92,7 @@ func (h *InputHandler) resizeStart(mei mouse.MouseEventInfo) {
 	if subject == 0 {
 		return
 	}
-	if isIgnored(subject) {
+	if windowmanager.IsIgnored(subject) {
 		return
 	}
 
@@ -169,7 +123,7 @@ func applyResize(h *InputHandler, p wintypes.POINT) {
 	if d&windows.Right > 0 {
 		r.Right -= int32(delta.X)
 	}
-	winapiabstractions.SetWindowRect(h.eventInfo.handle, r)
+	wia.SetWindowRect(h.eventInfo.handle, r)
 }
 func (h *InputHandler) resizing(mei mouse.MouseEventInfo) {
 	applyResize(h, mei.Point)
@@ -184,7 +138,7 @@ func (h *InputHandler) dragStart(mei mouse.MouseEventInfo) {
 	if subject == 0 {
 		return
 	}
-	if isIgnored(subject) {
+	if windowmanager.IsIgnored(subject) {
 		return
 	}
 	rect := winapi.GetWindowRect(subject)
@@ -204,7 +158,7 @@ func applyMove(h *InputHandler, p wintypes.POINT) {
 	delta := h.eventInfo.trigger.Point.Sub(p)
 	startPoint := wintypes.POINT{X: wintypes.LONG(h.eventInfo.startPosition.Left), Y: wintypes.LONG(h.eventInfo.startPosition.Top)}
 	target := startPoint.Sub(delta)
-	winapiabstractions.MoveWindow(h.eventInfo.handle, target)
+	wia.MoveWindow(h.eventInfo.handle, target)
 }
 
 func (h *InputHandler) dragging(mei mouse.MouseEventInfo) {
@@ -218,16 +172,16 @@ func (h *InputHandler) dragEnd(mei mouse.MouseEventInfo) {
 func (h *InputHandler) printMouseover(mei mouse.MouseEventInfo) {
 	subject := winapi.WindowFromPoint(mei.Point)
 	rootOwner := winapi.GetAncestor(subject, wintypes.GA_ROOTOWNER)
-	windowTitle, _ := winapiabstractions.GetWindowTextEasy(subject)
+	windowTitle, _ := wia.GetWindowTextEasy(subject)
 	fmt.Printf("subject %v) %v\n", subject, windowTitle)
-	windowTitle, _ = winapiabstractions.GetWindowTextEasy(rootOwner)
+	windowTitle, _ = wia.GetWindowTextEasy(rootOwner)
 	fmt.Printf("subject owner %v) %v\n", rootOwner, windowTitle)
 }
 
 func (h *InputHandler) OnMouseInput(mei mouse.MouseEventInfo) bool {
 	switch mei.Action {
 	case mouse.LBUTTONDOWN:
-		if state, ok := h.keyMods[actionKey]; ok && state && !h.eventInfo.resizing {
+		if h.actionKeyDown() && !h.eventInfo.resizing {
 			h.dragStart(mei)
 			return true
 		}
@@ -237,7 +191,7 @@ func (h *InputHandler) OnMouseInput(mei mouse.MouseEventInfo) bool {
 			return true
 		}
 	case mouse.RBUTTONDOWN:
-		if state, ok := h.keyMods[actionKey]; ok && state && !h.eventInfo.dragging {
+		if h.actionKeyDown() && !h.eventInfo.dragging {
 			h.resizeStart(mei)
 			return true
 		}
@@ -253,15 +207,13 @@ func (h *InputHandler) OnMouseInput(mei mouse.MouseEventInfo) bool {
 			h.resizing(mei)
 		}
 	case mouse.VMOUSEWHEEL:
-		if state, ok := h.keyMods[actionKey]; ok && state {
+		if h.actionKeyDown() {
 			hwnd := winapi.GetForegroundWindow()
-			var d direction
 			if mei.WheelDelta > 0 {
-				d = Next
+				go h.wm.PrevWindow(hwnd)
 			} else {
-				d = Previous
+				go h.wm.NextWindow(hwnd)
 			}
-			SelectSibling(hwnd, d)
 			return true
 		}
 	}
