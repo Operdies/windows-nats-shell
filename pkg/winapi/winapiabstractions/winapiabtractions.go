@@ -2,6 +2,7 @@ package winapiabstractions
 
 import (
 	"sort"
+	"time"
 	"unsafe"
 
 	// natswindows "github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
@@ -96,13 +97,17 @@ func ResizeWindow(hwnd wintypes.HWND, cx, cy int) {
 }
 
 func SetWindowRect(hwnd wintypes.HWND, target wintypes.RECT) {
-	l := int(target.Left)
-	t := int(target.Top)
-	r := int(target.Right)
-	b := int(target.Bottom)
-	width := r - l
-	height := b - t
-	winapi.SetWindowPos(hwnd, 0, l, t, width, height, wintypes.SWP_NOACTIVATE|wintypes.SWP_NOOWNERZORDER)
+	winapi.SetWindowPos(hwnd, 0, int(target.Left), int(target.Top), int(target.Width()), int(target.Height()), wintypes.SWP_NOACTIVATE|wintypes.SWP_NOOWNERZORDER|wintypes.SWP_NOZORDER|wintypes.SWP_ASYNCWINDOWPOS)
+}
+
+func AnimateRect(hwnd wintypes.HWND, steps []wintypes.RECT, duration time.Duration) {
+	each := duration / time.Duration(len(steps))
+	ticker := time.NewTicker(each)
+
+	for _, s := range steps {
+		SetWindowRect(hwnd, s)
+		<-ticker.C
+	}
 }
 
 func HideBorder(hwnd wintypes.HWND) bool {
