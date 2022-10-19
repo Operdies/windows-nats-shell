@@ -2,17 +2,23 @@ package inputhandler
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/operdies/windows-nats-shell/pkg/input"
 	"github.com/operdies/windows-nats-shell/pkg/input/keyboard"
 	"github.com/operdies/windows-nats-shell/pkg/input/mouse"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
+	"github.com/operdies/windows-nats-shell/pkg/utils/query"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/windowmanager"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
 )
 
-var actionKey = input.VK_MAP["nullkey"]
+var (
+	actionKey    = input.VK_MAP["nullkey"]
+	ignored      = map[string]bool{"Background": true}
+	ignoredCache = map[wintypes.HWND]bool{}
+)
 
 type InputHandler struct {
 	keyMods   map[input.VKEY]bool
@@ -48,16 +54,53 @@ const (
 	Previous           = 2
 )
 
-func SelectSibling(siblingOf wintypes.HWND, dir direction) {
-	var focus wintypes.HWND
-	prev, next := windowmanager.GetSiblings(siblingOf)
-
-	if dir == Next {
-		focus = next
-	} else {
-		focus = prev
+func isIgnored(hwnd wintypes.HWND) bool {
+	if hwnd == 0 {
+		return true
 	}
-	winapi.SuperFocusStealer(focus)
+	v, ok := ignoredCache[hwnd]
+	if ok && v {
+		return true
+	}
+	title, _ := windowmanager.GetWindowTextEasy(hwnd)
+	v, ok = ignored[title]
+	ignoredCache[hwnd] = v && ok
+	return v && ok
+}
+
+func SelectSibling(siblingOf wintypes.HWND, dir direction) {
+	if isIgnored(siblingOf) {
+		return
+	}
+	windows := windowmanager.GetVisibleWindows()
+	handles := query.Select(windows, func(w wintypes.Window) wintypes.HWND { return w.Handle })
+	handles = query.Filter(handles, func(hwnd wintypes.HWND) bool { return !isIgnored(hwnd) })
+	// Ensure the handles are always ordered the same way
+	sort.Slice(handles, func(i, j int) bool {
+		return handles[i] < handles[j]
+	})
+	// Reverse the array to cycle backwards instead of forwards
+	if dir == Previous {
+		for i, j := 0, len(handles)-1; i < j; i, j = i+1, j-1 {
+			handles[i], handles[j] = handles[j], handles[i]
+		}
+	}
+
+	// Remove 'siblingOf' from the list, and rearrange the list
+	for i, w := range handles {
+		if w == siblingOf {
+			handles = append(handles[i+1:], handles[:i]...)
+			break
+		}
+	}
+
+	for _, w := range handles {
+		success := winapi.SuperFocusStealer(w)
+		if success {
+			return
+		}
+	}
+
 }
 
 func (k *InputHandler) OnKeyboardInput(kei keyboard.KeyboardEventInfo) bool {
@@ -92,6 +135,12 @@ func getRootOwnerAtPoint(mei mouse.MouseEventInfo) wintypes.HWND {
 
 func (h *InputHandler) resizeStart(mei mouse.MouseEventInfo) {
 	subject := getRootOwnerAtPoint(mei)
+	if subject == 0 {
+		return
+	}
+	if isIgnored(subject) {
+		return
+	}
 
 	rect := winapi.GetWindowRect(subject)
 	corner := windows.GetNearestCardinal(mei.Point, rect)
@@ -133,6 +182,9 @@ func (h *InputHandler) resizeEnd(mei mouse.MouseEventInfo) {
 func (h *InputHandler) dragStart(mei mouse.MouseEventInfo) {
 	subject := getRootOwnerAtPoint(mei)
 	if subject == 0 {
+		return
+	}
+	if isIgnored(subject) {
 		return
 	}
 	rect := winapi.GetWindowRect(subject)

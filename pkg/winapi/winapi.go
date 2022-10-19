@@ -34,6 +34,8 @@ var (
 	attachThreadInput        = user32.MustFindProc("AttachThreadInput")
 	getWindowThreadProcessId = user32.MustFindProc("GetWindowThreadProcessId")
 	systemParametersInfoA    = user32.MustFindProc("SystemParametersInfoA")
+	getWindowLongA           = user32.MustFindProc("GetWindowLongA")
+	setWindowLongA           = user32.MustFindProc("SetWindowLongA")
 
 	getMessageW      = user32.MustFindProc("GetMessageW")
 	translateMessage = user32.MustFindProc("TranslateMessage")
@@ -54,6 +56,19 @@ var (
 	Shlwapi          = windows.MustLoadDLL("Shlwapi.dll")
 	assocQueryString = Shlwapi.MustFindProc("AssocQueryStringA")
 )
+
+func GetWindowLong(hwnd wintypes.HWND, index wintypes.GWL_INDEX) wintypes.GWL_INDEX {
+	r, _, _ := getWindowLongA.Call(uintptr(hwnd), uintptr(index))
+	return int32(r)
+}
+
+func SetWindowLongA(hwnd windows.HWND, index wintypes.GWL_INDEX, dwNewLong wintypes.LONG) (wintypes.LONG, error) {
+	r, _, err := setWindowLongA.Call(uintptr(hwnd), uintptr(index), uintptr(dwNewLong))
+	if r == 0 {
+		return 0, err
+	}
+	return wintypes.LONG(r), nil
+}
 
 func SetWindowPos(hwnd wintypes.HWND, hwndInsertAfter wintypes.HWND, X, Y, cx, cy int, flags wintypes.SWP) error {
 	r, _, err := setWindowPos.Call(uintptr(hwnd), uintptr(hwndInsertAfter), uintptr(X), uintptr(Y), uintptr(cx), uintptr(cy), uintptr(flags))

@@ -24,9 +24,9 @@ func WindowFromPoint(point wintypes.POINT) wintypes.HWND {
 }
 
 var (
-	STYLES    C.long = C.WS_CAPTION | C.WS_THICKFRAME | C.WS_MINIMIZEBOX | C.WS_MAXIMIZEBOX | C.WS_SYSMENU
-	EX_STYLES C.long = C.WS_EX_DLGMODALFRAME | C.WS_EX_CLIENTEDGE | C.WS_EX_STATICEDGE
-	REDRAW    C.uint = C.SWP_FRAMECHANGED | C.SWP_NOMOVE | C.SWP_NOSIZE | C.SWP_NOZORDER | C.SWP_NOOWNERZORDER
+	BorderlessStyles   C.long = C.WS_CAPTION | C.WS_THICKFRAME | C.WS_MINIMIZEBOX | C.WS_MAXIMIZEBOX | C.WS_SYSMENU
+	BorderlessExStyles C.long = C.WS_EX_DLGMODALFRAME | C.WS_EX_CLIENTEDGE | C.WS_EX_STATICEDGE
+	RedrawFlags        C.uint = C.SWP_FRAMECHANGED | C.SWP_NOMOVE | C.SWP_NOSIZE | C.SWP_NOZORDER | C.SWP_NOOWNERZORDER
 )
 
 func toCType(hwnd wintypes.HWND) C.HWND {
@@ -37,12 +37,12 @@ func EnableBorders(h wintypes.HWND) {
 	hwnd := toCType(h)
 	var lStyle C.long
 	lStyle = C.GetWindowLong(hwnd, C.GWL_STYLE)
-	lStyle |= STYLES
+	lStyle |= BorderlessStyles
 	C.SetWindowLong(hwnd, C.GWL_STYLE, lStyle)
 
 	var eStyle C.long
 	eStyle = C.GetWindowLong(hwnd, C.GWL_EXSTYLE)
-	eStyle |= EX_STYLES
+	eStyle |= BorderlessExStyles
 	C.SetWindowLong(hwnd, C.GWL_EXSTYLE, eStyle)
 	redrawWindow(h)
 	borderMap[h] = true
@@ -51,11 +51,11 @@ func EnableBorders(h wintypes.HWND) {
 func DisableBorders(h wintypes.HWND) {
 	hwnd := toCType(h)
 	lStyle := C.GetWindowLong(hwnd, C.GWL_STYLE)
-	lStyle &= ^STYLES
+	lStyle &= ^BorderlessStyles
 	C.SetWindowLong(hwnd, C.GWL_STYLE, lStyle)
 
 	eStyle := C.GetWindowLong(hwnd, C.GWL_EXSTYLE)
-	eStyle &= ^EX_STYLES
+	eStyle &= ^BorderlessExStyles
 	C.SetWindowLong(hwnd, C.GWL_EXSTYLE, eStyle)
 	redrawWindow(h)
 	borderMap[h] = false
@@ -63,7 +63,7 @@ func DisableBorders(h wintypes.HWND) {
 
 func redrawWindow(h wintypes.HWND) {
 	hwnd := toCType(h)
-	C.SetWindowPos(hwnd, nil, 0, 0, 0, 0, REDRAW)
+	C.SetWindowPos(hwnd, nil, 0, 0, 0, 0, RedrawFlags)
 }
 
 var (
@@ -95,7 +95,7 @@ const (
 // Tool windows don't appear in the app switcher or the task bar
 func MakeToolWindow(hwnd unsafe.Pointer) {
 	style := C.GetWindowLong((C.HWND)(hwnd), GWL_EXSTYLE)
-	// style |= C.WS_EX_NOACTIVATE
+	style |= C.WS_EX_NOACTIVATE
 	style &= ^C.WS_EX_APPWINDOW
 	style |= C.WS_EX_TOOLWINDOW
 	C.SetWindowLong((C.HWND)(hwnd), GWL_EXSTYLE, style)

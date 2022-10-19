@@ -64,6 +64,7 @@ Would make the shell usable without a linux driver. The shortcut manager needs t
 * Processes created with `driver`'s `System.LaunchProgram` will run as admin if `driver` is running as admin.
 - Consider if we need a full-blown CreateProcess implementation which mines the registry and properly controls inherited handles
 * `driver` cannot open e.g. a `.png` file after we switched to `ShellExecute`.
+- Add handlers to config?
 
 ## Thought cabinet
 
