@@ -60,6 +60,7 @@ func start(config *shell.Configuration) bool {
 			} else {
 				if newCfg, ok := cfg2.Services[s]; ok {
 					config.Services[s] = newCfg
+					config.ServiceConfigs[s] = cfg2.ServiceConfigs[s]
 				}
 			}
 			job.Stop()
