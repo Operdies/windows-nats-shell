@@ -2,8 +2,6 @@ package wintypes
 
 import (
 	"unsafe"
-
-	"golang.org/x/sys/windows"
 )
 
 // SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, SPIF_+UPDATEINIFILE)
@@ -201,7 +199,6 @@ type Window struct {
 	ZOrder    int
 }
 
-type RECT2 = windows.Rect
 type RECT struct {
 	Left   int32
 	Top    int32
