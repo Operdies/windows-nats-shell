@@ -1,4 +1,4 @@
-package windowmanager
+package winapiabstractions
 
 import (
 	"sort"
@@ -7,7 +7,7 @@ import (
 	// natswindows "github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/internal/winapicgo"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 	"golang.org/x/sys/windows"
 )
 

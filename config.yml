@@ -55,9 +55,17 @@ services:
           - nats:
               subject: System.LaunchProgramAsAdmin
               payload: pwsh.exe
+      - keys: nullkey+tab 
+        actions: 
+          - nats:
+              subject: System.LaunchProgram
+              payload: pwsh.exe
       - keys: pause 
         actions: 
           - nats:
               subject: Window.ToggleBorder 
   windowmanager:
     executable: ./windowmanager.exe
+    layout: revolver
+    actionkey: nullkey
+    cyclekey: alt

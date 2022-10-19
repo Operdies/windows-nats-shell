@@ -11,7 +11,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/operdies/windows-nats-shell/pkg/utils/query"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
 type WatchedDir struct {

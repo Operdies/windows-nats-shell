@@ -3,7 +3,7 @@ package windows
 import (
 	"math"
 
-	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
 const (

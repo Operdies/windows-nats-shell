@@ -12,7 +12,7 @@ import (
 	"github.com/operdies/windows-nats-shell/cmd/background/gfx"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/windowmanager"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/winapiabstractions"
 )
 
 func init() {
@@ -124,20 +124,20 @@ func main() {
 	render := make(chan bool)
 
 	_, err = nc.Subscribe.WH_SHELL(func(ci shell.ShellEventInfo) {
-		windowmanager.SetBottomMost(hwnd)
+		winapiabstractions.SetBottomMost(hwnd)
 		render <- true
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	windowmanager.MakeToolWindow(hwnd)
-	windowmanager.SetBottomMost(hwnd)
+	winapiabstractions.MakeToolWindow(hwnd)
+	winapiabstractions.SetBottomMost(hwnd)
 	window.SetMouseButtonCallback(func(w *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
 		// Writing to a channel seems to cause a deadlock.
 		// It works fine when doing it from a goroutine. Strange
 		go func() {
-			windowmanager.SetBottomMost(hwnd)
+			winapiabstractions.SetBottomMost(hwnd)
 			render <- true
 		}()
 	})

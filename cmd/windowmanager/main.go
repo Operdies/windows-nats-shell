@@ -6,15 +6,23 @@ import (
 	"github.com/operdies/windows-nats-shell/pkg/input/mouse"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/windowmanager"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/winapiabstractions"
+	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
+
+type Config struct {
+	Layout string 
+	CycleKey string
+	ActionKey string
+}
 
 func main() {
 	nc := client.Default()
+	// cfg := client.GetConfig[Config](nc.Request)
+
 	sub, err := nc.Subscribe.WH_SHELL(func(sei shell.ShellEventInfo) {
 		if sei.ShellCode == shell.HSHELL_WINDOWCREATED {
-			windowmanager.HideBorder(wintypes.HWND(sei.WParam))
+			winapiabstractions.HideBorder(wintypes.HWND(sei.WParam))
 		}
 	})
 	if err != nil {

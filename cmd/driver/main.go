@@ -16,8 +16,8 @@ import (
 	"github.com/operdies/windows-nats-shell/pkg/utils/filewatcher"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/screen"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/windowmanager"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/winapi/winapiabstractions"
+	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
 type config struct {
@@ -42,7 +42,7 @@ func ListenIndefinitely() {
 	indexItems(cfg)
 
 	// Ensure windows are computed and published at most once per second
-	batchedPublish := utils.Batcher(func() { nc.Publish.WindowsUpdated(windowmanager.GetVisibleWindows()) },
+	batchedPublish := utils.Batcher(func() { nc.Publish.WindowsUpdated(winapiabstractions.GetVisibleWindows()) },
 		time.Millisecond*100, time.Millisecond*500)
 
 	nc.Subscribe.WH_SHELL(func(e shell.ShellEventInfo) {
@@ -60,7 +60,7 @@ func ListenIndefinitely() {
 		}
 	})
 
-	nc.Subscribe.GetWindows(windowmanager.GetVisibleWindows)
+	nc.Subscribe.GetWindows(winapiabstractions.GetVisibleWindows)
 
 	nc.Subscribe.IsWindowFocused(func(h wintypes.HWND) bool {
 		current := winapi.GetForegroundWindow()
@@ -109,19 +109,19 @@ func ListenIndefinitely() {
 		if h == 0 {
 			h = winapi.GetForegroundWindow()
 		}
-		return windowmanager.HideBorder(h)
+		return winapiabstractions.HideBorder(h)
 	})
 	nc.Subscribe.ShowBorder(func(h wintypes.HWND) bool {
 		if h == 0 {
 			h = winapi.GetForegroundWindow()
 		}
-		return windowmanager.ShowBorder(h)
+		return winapiabstractions.ShowBorder(h)
 	})
 	nc.Subscribe.ToggleBorder(func(h wintypes.HWND) bool {
 		if h == 0 {
 			h = winapi.GetForegroundWindow()
 		}
-		return windowmanager.ToggleBorder(h)
+		return winapiabstractions.ToggleBorder(h)
 	})
 	select {}
 }

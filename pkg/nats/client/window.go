@@ -6,7 +6,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
 	"github.com/operdies/windows-nats-shell/pkg/utils"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
 func (client Requester) Windows() []wintypes.Window {

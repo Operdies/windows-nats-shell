@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
 type VKEY uint32
