@@ -143,7 +143,7 @@ func (wm *WindowManager) Close() {
 func partition(around wintypes.HWND) []wintypes.HWND {
 	windows := wia.GetVisibleWindows()
 	handles := query.Select(windows, func(w wintypes.Window) wintypes.HWND { return w.Handle })
-	handles = query.Filter(handles, func(hwnd wintypes.HWND) bool { return !IsIgnored(hwnd) })
+	handles = query.Filter(handles, func(hwnd wintypes.HWND) bool { return !IsIgnored(hwnd) && !wia.WindowMinimized(hwnd) })
 	// Ensure the handles are always ordered the same way
 	sort.Slice(handles, func(i, j int) bool {
 		return handles[i] < handles[j]

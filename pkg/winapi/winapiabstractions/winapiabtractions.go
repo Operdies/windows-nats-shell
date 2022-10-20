@@ -147,3 +147,8 @@ func ToggleBorder(hwnd wintypes.HWND) bool {
 	winapicgo.ToggleBorders(hwnd)
 	return true
 }
+
+func WindowMinimized(hwnd wintypes.HWND) bool {
+	styles := winapi.GetWindowLong(hwnd, wintypes.GWL_STYLE)
+	return styles&wintypes.WS_MINIMIZE == wintypes.WS_MINIMIZE
+}
