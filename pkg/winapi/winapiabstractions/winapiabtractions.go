@@ -1,6 +1,7 @@
 package winapiabstractions
 
 import (
+	"context"
 	"sort"
 	"time"
 	"unsafe"
@@ -100,13 +101,21 @@ func SetWindowRect(hwnd wintypes.HWND, target wintypes.RECT) {
 	winapi.SetWindowPos(hwnd, 0, int(target.Left), int(target.Top), int(target.Width()), int(target.Height()), wintypes.SWP_NOACTIVATE|wintypes.SWP_NOOWNERZORDER|wintypes.SWP_NOZORDER|wintypes.SWP_ASYNCWINDOWPOS)
 }
 
-func AnimateRect(hwnd wintypes.HWND, steps []wintypes.RECT, duration time.Duration) {
-	each := duration / time.Duration(len(steps))
+func AnimateRectWithContext(hwnd wintypes.HWND, steps []wintypes.RECT, ctx context.Context) {
+	deadline, _ := ctx.Deadline()
+	start := time.Now()
+	timeLeft := deadline.Sub(start)
+	each := timeLeft / time.Duration(len(steps))
 	ticker := time.NewTicker(each)
 
 	for _, s := range steps {
-		SetWindowRect(hwnd, s)
-		<-ticker.C
+		select {
+		case <-ticker.C:
+			SetWindowRect(hwnd, s)
+		case <-ctx.Done():
+			SetWindowRect(hwnd, steps[len(steps)-1])
+			return
+		}
 	}
 }
 

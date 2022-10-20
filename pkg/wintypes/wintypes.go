@@ -254,6 +254,33 @@ func (r RECT) CenterAround(other POINT) RECT {
 	return r.CenterIn(rect)
 }
 
+func animate(start, end float64, steps int) []float64 {
+	ret := make([]float64, 0, steps)
+	step := (end - start) / float64(steps)
+	for i := 0; i < steps; i++ {
+		ret = append(ret, start+(step*float64(i+1)))
+	}
+	return ret
+}
+
+// Animate rect `r` towards rect `to` with `frames` frames
+func (r RECT) Animate(to RECT, frames int) []RECT {
+	lefts := animate(float64(r.Left), float64(to.Left), frames)
+	rights := animate(float64(r.Right), float64(to.Right), frames)
+	tops := animate(float64(r.Top), float64(to.Top), frames)
+	bottoms := animate(float64(r.Bottom), float64(to.Bottom), frames)
+	result := make([]RECT, 0, frames)
+	for i := 0; i < frames; i++ {
+		result = append(result, RECT{
+			Left:   int32(lefts[i]),
+			Right:  int32(rights[i]),
+			Top:    int32(tops[i]),
+			Bottom: int32(bottoms[i]),
+		})
+	}
+	return result
+}
+
 // Given a number between 0 and 1, get a corresponding point
 // on the rectangle perimeter such that 0 and 1 is the center of the top line,
 // 0 and 1 is the center of the top line

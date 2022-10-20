@@ -1,8 +1,10 @@
 package windowmanager
 
 import (
+	"context"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -26,6 +28,7 @@ var (
 	actionKey    = input.VK_MAP["nullkey"]
 	ignored      = map[string]bool{"Background": true}
 	ignoredCache = map[wintypes.HWND]bool{}
+	maplock      = sync.Mutex{}
 )
 
 func IsIgnored(hwnd wintypes.HWND) bool {
@@ -36,6 +39,9 @@ func IsIgnored(hwnd wintypes.HWND) bool {
 	if ok && v {
 		return true
 	}
+	maplock.Lock()
+	defer maplock.Unlock()
+
 	title, _ := wia.GetWindowTextEasy(hwnd)
 	v, ok = ignored[title]
 	ignoredCache[hwnd] = v && ok
@@ -55,8 +61,9 @@ type Config struct {
 }
 
 type WindowManager struct {
-	Config *Config
-	subs   []*nats.Subscription
+	Config             *Config
+	subs               []*nats.Subscription
+	cancelLayoutChange context.CancelFunc
 }
 
 func Create(cfg Config) WindowManager {
@@ -91,12 +98,13 @@ func Create(cfg Config) WindowManager {
 func (wm *WindowManager) Monitor() {
 	nc := client.Default()
 	sub, err := nc.Subscribe.WH_SHELL(func(sei shell.ShellEventInfo) {
+		// Newly created windows should be inserted without changing focus
 		if sei.ShellCode == shell.HSHELL_WINDOWCREATED {
 			if IsIgnored(wintypes.HWND(sei.WParam)) {
 				return
 			}
 			// wia.HideBorder(wintypes.HWND(sei.WParam))
-			wm.calculateLayout(wintypes.HWND(sei.WParam), false)
+			// wm.calculateLayout(wintypes.HWND(sei.WParam), false)
 		} else if sei.ShellCode == shell.HSHELL_WINDOWDESTROYED {
 			// current := winapi.GetForegroundWindow()
 			// wm.calculateLayout(current)
@@ -134,8 +142,23 @@ func partition(around wintypes.HWND) []wintypes.HWND {
 	return handles
 }
 
-func (wm *WindowManager) SelectSibling(siblingOf wintypes.HWND, reverse bool) {
-	for i := 0; i < 3; i++ {
+func (wm *WindowManager) selectSibling(siblingOf wintypes.HWND, reverse bool) {
+	// Cancel any currently running animation
+	if wm.cancelLayoutChange != nil {
+		wm.cancelLayoutChange()
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*300)
+	wm.cancelLayoutChange = cancel
+	done := false
+	go func() {
+		<-ctx.Done()
+		done = true
+	}()
+
+	for i := 0; i < 50; i++ {
+		if done {
+			return
+		}
 		subject := siblingOf
 		if subject == 0 {
 			subject = winapi.GetForegroundWindow()
@@ -153,77 +176,44 @@ func (wm *WindowManager) SelectSibling(siblingOf wintypes.HWND, reverse bool) {
 		}
 
 		if len(handles) == 0 {
-			go wm.calculateLayout(subject, reverse)
+			go wm.calculateLayout(subject, reverse, ctx)
 			return
 		}
 
-		for _, w := range handles {
-			success := winapi.SuperFocusStealer(w)
-			if success {
-				go wm.calculateLayout(w, reverse)
-				return
-			}
+		next := handles[0]
+		if winapi.SuperFocusStealer(handles[0]) {
+			go wm.calculateLayout(next, reverse, ctx)
+			return
 		}
+		// If the operation failed, wait a bit and try again
 		time.Sleep(time.Millisecond)
 	}
 }
 
-func (wm *WindowManager) calculateLayout(mainWindow wintypes.HWND, reverse bool) {
-	screenSize := screen.GetResolution()
-	sw := int32(screenSize.Width)
-	sh := int32(screenSize.Height)
-	wMargin := int32(float64(sw) * wm.Config.Ratio)
-	hMargin := int32(float64(sh) * wm.Config.Ratio)
-	mainRect := wintypes.RECT{
-		Left:   sw - wMargin,
-		Top:    sh - hMargin,
-		Right:  wMargin,
-		Bottom: hMargin,
-	}
-	rem := partition(mainWindow)
-	cnt := len(rem)
-	screenRect := wintypes.RECT{
-		Left: 0, Top: 0,
-		Right: sw, Bottom: sh,
-	}
-	for i, w := range rem {
+func (wm *WindowManager) calculateLayout(mainWindow wintypes.HWND, reverse bool, ctx context.Context) {
+	animationSteps := 15
+	otherWindows := partition(mainWindow)
+	cnt := len(otherWindows)
+	screenRect := screen.GetScreenRect()
+
+	for i, w := range otherWindows {
+		// The position of this window on the perimeter of the monitor
 		position := float64(i) / float64(cnt)
 		point := screenRect.GetPointOnPerimeter(position)
-		tit, _ := wia.GetWindowTextEasy(w)
-		fmt.Printf("Centering %v on %v\n", tit, point)
-		winRect := winapi.GetWindowRect(w)
-		newRect := winRect.CenterAround(point)
-		if newRect.Width() == mainRect.Width() {
-			newRect = newRect.Scale(0.85)
-		}
-		fmt.Printf("winRect: %v\n", winRect)
-		fmt.Printf("newRect: %v\n", newRect)
-
-		n := 50
-		animationSteps := make([]wintypes.RECT, 0, n)
-		var start, end float64
-		if !reverse {
-			start = float64(i+1) / float64(cnt)
-		} else {
-			start = float64(i-1) / float64(cnt)
-		}
-		end = float64(i) / float64(cnt)
-		step := (end - start) / float64(n)
-		for j := 1; j <= n; j++ {
-			position = start + float64(j)*step
-			point := screenRect.GetPointOnPerimeter(position)
-			animationSteps = append(animationSteps, newRect.CenterAround(point))
-		}
-		go wia.AnimateRect(w, animationSteps, time.Millisecond*200)
+		currentWindowRect := winapi.GetWindowRect(w)
+		newWindowRect := currentWindowRect.CenterAround(point)
+		anim := currentWindowRect.Animate(newWindowRect, animationSteps)
+		go wia.AnimateRectWithContext(w, anim, ctx)
 	}
 
-	fmt.Printf("mainRect: %+v\n", mainRect)
-	wia.SetWindowRect(mainWindow, mainRect)
+	currentMainRect := winapi.GetWindowRect(mainWindow)
+	newMainRect := screenRect.Scale(wm.Config.Ratio)
+	go wia.AnimateRectWithContext(mainWindow, currentMainRect.Animate(newMainRect, animationSteps), ctx)
 }
 
 func (wm *WindowManager) PrevWindow(hwnd wintypes.HWND) {
-	wm.SelectSibling(hwnd, true)
+	wm.selectSibling(hwnd, true)
 }
 func (wm *WindowManager) NextWindow(hwnd wintypes.HWND) {
-	wm.SelectSibling(hwnd, false)
+	wm.selectSibling(hwnd, false)
 }

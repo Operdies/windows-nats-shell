@@ -44,10 +44,6 @@ Some (toggle-able) way to automatically tile windows. BSPC inspired layouts
 Cycle between revolver strategy, tall mode, and monocle mode -- revolver with max size is monocle..
 Disable borders on all windows (maybe with hotkey to enable currently focused window?)
 
-* Add generic rectangle animation
-  - e.g. RECT.Animate(to RECT, steps int) []RECT
-* Cancel window animations when a new animation is initiated
-* Add non-linear animation steps to make them appear more snazzy
 * add toggle for auto-layout
 * swap main / secondary windows when a window is manually switched (alt-tab or click)
   - Respect manual order overrides when manually swapping
