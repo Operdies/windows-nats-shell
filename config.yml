@@ -69,5 +69,8 @@ services:
     layout: revolver
     actionkey: nullkey
     cyclekey: alt
-    gap: 0.1
-    ratio: 0.90
+    ratio: 0.80
+    smallscale: 1.0
+    perimeter: 0.6
+    animationframes: 100
+    animationtime: 300

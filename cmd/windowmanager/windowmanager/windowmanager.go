@@ -54,19 +54,24 @@ type Config struct {
 	CycleVKey  input.VKEY
 	ActionKey  string
 	ActionVKey input.VKEY
-	// The gap between the centered window and a revolving window as a percentage of screen height
-	Gap float64
-	// The percentage of screen space used for the focused window
+	// The scale of focused windows
 	Ratio float64
+	// The scale of non-focused windows
+	SmallScale float64
+	// The location of the screen 'perimeter'
+	Perimeter       float64
+	AnimationFrames int
+	AnimationTime   int
 }
 
 type WindowManager struct {
 	Config             *Config
 	subs               []*nats.Subscription
 	cancelLayoutChange context.CancelFunc
+	cancelContextLock  sync.Mutex
 }
 
-func Create(cfg Config) WindowManager {
+func Create(cfg Config) *WindowManager {
 	switch cfg.Layout {
 	case revolver:
 		break
@@ -74,12 +79,24 @@ func Create(cfg Config) WindowManager {
 		panic(fmt.Errorf("Unknown layout %v.", cfg.Layout))
 	}
 
-	if cfg.Gap > 1 || cfg.Gap < 0 {
-		panic("Gap must be a number between 0 and 1")
-	}
-
 	if cfg.Ratio > 1 || cfg.Ratio < 0 {
 		panic("Ratio must be a number between 0 and 1")
+	}
+
+	if cfg.Ratio == 0 {
+		cfg.Ratio = 0.8
+	}
+	if cfg.SmallScale == 0 {
+		cfg.SmallScale = 1.0
+	}
+	if cfg.Perimeter == 0 {
+		cfg.Perimeter = 0.9
+	}
+	if cfg.AnimationFrames == 0 {
+		cfg.AnimationFrames = 15
+	}
+	if cfg.AnimationTime == 0 {
+		cfg.AnimationTime = 200
 	}
 
 	ck := input.VK_MAP[cfg.CycleKey]
@@ -91,8 +108,9 @@ func Create(cfg Config) WindowManager {
 	cfg.ActionVKey = ak
 
 	var man WindowManager
+	fmt.Printf("cfg: %+v\n", cfg)
 	man.Config = &cfg
-	return man
+	return &man
 }
 
 func (wm *WindowManager) Monitor() {
@@ -142,13 +160,20 @@ func partition(around wintypes.HWND) []wintypes.HWND {
 	return handles
 }
 
-func (wm *WindowManager) selectSibling(siblingOf wintypes.HWND, reverse bool) {
+func (wm *WindowManager) cancelAndCreateContext() context.Context {
+	wm.cancelContextLock.Lock()
+	defer wm.cancelContextLock.Unlock()
 	// Cancel any currently running animation
 	if wm.cancelLayoutChange != nil {
 		wm.cancelLayoutChange()
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*300)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(wm.Config.AnimationTime))
 	wm.cancelLayoutChange = cancel
+	return ctx
+}
+
+func (wm *WindowManager) selectSibling(siblingOf wintypes.HWND, reverse bool) {
+	ctx := wm.cancelAndCreateContext()
 	done := false
 	go func() {
 		<-ctx.Done()
@@ -176,13 +201,13 @@ func (wm *WindowManager) selectSibling(siblingOf wintypes.HWND, reverse bool) {
 		}
 
 		if len(handles) == 0 {
-			go wm.calculateLayout(subject, reverse, ctx)
+			go wm.calculateLayout(subject, ctx)
 			return
 		}
 
 		next := handles[0]
-		if winapi.SuperFocusStealer(handles[0]) {
-			go wm.calculateLayout(next, reverse, ctx)
+		if winapi.SuperFocusStealer(next) {
+			go wm.calculateLayout(next, ctx)
 			return
 		}
 		// If the operation failed, wait a bit and try again
@@ -190,30 +215,51 @@ func (wm *WindowManager) selectSibling(siblingOf wintypes.HWND, reverse bool) {
 	}
 }
 
-func (wm *WindowManager) calculateLayout(mainWindow wintypes.HWND, reverse bool, ctx context.Context) {
-	animationSteps := 15
+func (wm *WindowManager) calculateLayout(mainWindow wintypes.HWND, ctx context.Context) {
+	if IsIgnored(mainWindow) {
+		return
+	}
+
+	screenRect := screen.GetScreenRect()
+
+	currentMainRect := winapi.GetWindowRect(mainWindow)
+	newMainRect := screenRect.Scale(wm.Config.Ratio)
+	go wia.AnimateRectWithContext(mainWindow, currentMainRect.Animate(newMainRect, wm.Config.AnimationFrames, false), ctx)
+
 	otherWindows := partition(mainWindow)
 	cnt := len(otherWindows)
-	screenRect := screen.GetScreenRect()
+	// Place windows on the perimeter at 0.85% of the screen size instead of the actual perimeter
+	perimeter := screenRect.Scale(wm.Config.Perimeter)
 
 	for i, w := range otherWindows {
 		// The position of this window on the perimeter of the monitor
 		position := float64(i) / float64(cnt)
-		point := screenRect.GetPointOnPerimeter(position)
+		point := perimeter.GetPointOnPerimeter(position)
 		currentWindowRect := winapi.GetWindowRect(w)
-		newWindowRect := currentWindowRect.CenterAround(point)
-		anim := currentWindowRect.Animate(newWindowRect, animationSteps)
+		newWindowRect := newMainRect.CenterAround(point).Scale(wm.Config.SmallScale)
+		anim := currentWindowRect.Animate(newWindowRect, wm.Config.AnimationFrames, false)
 		go wia.AnimateRectWithContext(w, anim, ctx)
 	}
-
-	currentMainRect := winapi.GetWindowRect(mainWindow)
-	newMainRect := screenRect.Scale(wm.Config.Ratio)
-	go wia.AnimateRectWithContext(mainWindow, currentMainRect.Animate(newMainRect, animationSteps), ctx)
 }
 
-func (wm *WindowManager) PrevWindow(hwnd wintypes.HWND) {
+func (wm *WindowManager) FocusPrevWindow(hwnd wintypes.HWND) {
 	wm.selectSibling(hwnd, true)
 }
-func (wm *WindowManager) NextWindow(hwnd wintypes.HWND) {
+func (wm *WindowManager) FocusNextWindow(hwnd wintypes.HWND) {
 	wm.selectSibling(hwnd, false)
+}
+func (wm *WindowManager) FocusThisWindow(next wintypes.HWND) {
+	ctx := wm.cancelAndCreateContext()
+	done := false
+	go func() {
+		<-ctx.Done()
+		done = true
+	}()
+	for !done {
+		if winapi.SuperFocusStealer(next) {
+			go wm.calculateLayout(next, ctx)
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
 }

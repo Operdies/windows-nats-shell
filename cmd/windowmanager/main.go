@@ -15,7 +15,7 @@ func main() {
 	wm.Monitor()
 	defer wm.Close()
 
-	inputHandler := inputhandler.Create(&wm)
+	inputHandler := inputhandler.Create(wm)
 	mouseHook, _ := mouse.InstallHook(inputHandler.OnMouseInput)
 	defer mouseHook.Uninstall()
 	keyHook, _ := keyboard.InstallHook(inputHandler.OnKeyboardInput)

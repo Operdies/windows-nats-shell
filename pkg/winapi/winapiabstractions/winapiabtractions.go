@@ -97,8 +97,13 @@ func ResizeWindow(hwnd wintypes.HWND, cx, cy int) {
 	winapi.SetWindowPos(hwnd, 0, 0, 0, cx, cy, wintypes.SWP_NOACTIVATE|wintypes.SWP_NOOWNERZORDER|wintypes.SWP_NOMOVE)
 }
 
-func SetWindowRect(hwnd wintypes.HWND, target wintypes.RECT) {
-	winapi.SetWindowPos(hwnd, 0, int(target.Left), int(target.Top), int(target.Width()), int(target.Height()), wintypes.SWP_NOACTIVATE|wintypes.SWP_NOOWNERZORDER|wintypes.SWP_NOZORDER|wintypes.SWP_ASYNCWINDOWPOS)
+func SetWindowRect(hwnd wintypes.HWND, target wintypes.RECT, resize bool) {
+	styles := wintypes.SWP_NOACTIVATE
+	styles |= wintypes.SWP_NOOWNERZORDER | wintypes.SWP_NOZORDER
+	if !resize {
+		styles |= wintypes.SWP_NOSIZE
+	}
+	winapi.SetWindowPos(hwnd, 0, int(target.Left), int(target.Top), int(target.Width()), int(target.Height()), uint(styles))
 }
 
 func AnimateRectWithContext(hwnd wintypes.HWND, steps []wintypes.RECT, ctx context.Context) {
@@ -108,12 +113,21 @@ func AnimateRectWithContext(hwnd wintypes.HWND, steps []wintypes.RECT, ctx conte
 	each := timeLeft / time.Duration(len(steps))
 	ticker := time.NewTicker(each)
 
-	for _, s := range steps {
+	timeDependentFrame := func() wintypes.RECT {
+		elapsed := time.Now().Sub(start)
+		idx := elapsed / each
+		if int(idx) >= len(steps) {
+			return steps[len(steps)-1]
+		}
+		return steps[idx]
+	}
+
+	for {
 		select {
 		case <-ticker.C:
-			SetWindowRect(hwnd, s)
+			SetWindowRect(hwnd, timeDependentFrame(), true)
 		case <-ctx.Done():
-			SetWindowRect(hwnd, steps[len(steps)-1])
+			SetWindowRect(hwnd, steps[len(steps)-1], true)
 			return
 		}
 	}

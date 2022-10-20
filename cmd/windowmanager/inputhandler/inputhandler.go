@@ -24,6 +24,8 @@ type eventInfo struct {
 	trigger mouse.MouseEventInfo
 	// are we currently dragging
 	dragging bool
+	// Was the window dragged during this drag event
+	dragged bool
 	// are we currently resizing
 	resizing bool
 	// The resizing handle
@@ -58,7 +60,7 @@ func (h *InputHandler) OnKeyboardInput(kei keyboard.KeyboardEventInfo) bool {
 	}
 
 	if keyDown && vkey == h.wm.Config.CycleVKey && h.actionKeyDown() {
-		h.wm.PrevWindow(0)
+		h.wm.FocusPrevWindow(0)
 		return true
 	}
 
@@ -123,7 +125,8 @@ func applyResize(h *InputHandler, p wintypes.POINT) {
 	if d&windows.Right > 0 {
 		r.Right -= int32(delta.X)
 	}
-	wia.SetWindowRect(h.eventInfo.handle, r)
+	winapi.SuperFocusStealer(h.eventInfo.handle)
+	wia.SetWindowRect(h.eventInfo.handle, r, true)
 }
 func (h *InputHandler) resizing(mei mouse.MouseEventInfo) {
 	applyResize(h, mei.Point)
@@ -158,14 +161,20 @@ func applyMove(h *InputHandler, p wintypes.POINT) {
 	delta := h.eventInfo.trigger.Point.Sub(p)
 	startPoint := wintypes.POINT{X: wintypes.LONG(h.eventInfo.startPosition.Left), Y: wintypes.LONG(h.eventInfo.startPosition.Top)}
 	target := startPoint.Sub(delta)
+	winapi.SuperFocusStealer(h.eventInfo.handle)
 	wia.MoveWindow(h.eventInfo.handle, target)
 }
 
 func (h *InputHandler) dragging(mei mouse.MouseEventInfo) {
+	h.eventInfo.dragged = true
 	applyMove(h, mei.Point)
 }
 func (h *InputHandler) dragEnd(mei mouse.MouseEventInfo) {
-	h.dragging(mei)
+	if h.eventInfo.dragged == false {
+		h.wm.FocusThisWindow(getRootOwnerAtPoint(mei))
+	} else {
+		h.dragging(mei)
+	}
 	h.eventInfo.dragging = false
 }
 
@@ -210,9 +219,9 @@ func (h *InputHandler) OnMouseInput(mei mouse.MouseEventInfo) bool {
 		if h.actionKeyDown() {
 			hwnd := winapi.GetForegroundWindow()
 			if mei.WheelDelta > 0 {
-				go h.wm.PrevWindow(hwnd)
+				go h.wm.FocusPrevWindow(hwnd)
 			} else {
-				go h.wm.NextWindow(hwnd)
+				go h.wm.FocusNextWindow(hwnd)
 			}
 			return true
 		}

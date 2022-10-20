@@ -50,14 +50,6 @@ const (
 	BottomRight                 = Bottom | Right
 )
 
-func dist(p1 wintypes.POINT, p2 wintypes.POINT) float64 {
-	x1 := float64(p1.X)
-	x2 := float64(p2.X)
-	y1 := float64(p1.Y)
-	y2 := float64(p2.Y)
-	return math.Sqrt(math.Pow(x1-x2, 2) + math.Pow(y1-y2, 2))
-}
-
 // Given a cardinal direction, get a point representing that direction on the rectangle
 func GetPoints(r wintypes.RECT) map[WindowCardinals]wintypes.POINT {
 	c := func(a, b int32) int32 { return a + (b-a)/2 }
@@ -78,7 +70,7 @@ func GetNearestCardinal(p wintypes.POINT, r wintypes.RECT) (result WindowCardina
 	candidates := GetPoints(r)
 	closest := math.Inf(1)
 	for k, v := range candidates {
-		d := dist(p, v)
+		d := p.DistanceTo(v)
 		if d < closest {
 			result = k
 			closest = d

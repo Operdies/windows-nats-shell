@@ -264,7 +264,11 @@ func animate(start, end float64, steps int) []float64 {
 }
 
 // Animate rect `r` towards rect `to` with `frames` frames
-func (r RECT) Animate(to RECT, frames int) []RECT {
+func (r RECT) Animate(final RECT, frames int, animateSize bool) []RECT {
+	to := final
+	if !animateSize {
+		to = r.CenterIn(to)
+	}
 	lefts := animate(float64(r.Left), float64(to.Left), frames)
 	rights := animate(float64(r.Right), float64(to.Right), frames)
 	tops := animate(float64(r.Top), float64(to.Top), frames)
@@ -278,6 +282,7 @@ func (r RECT) Animate(to RECT, frames int) []RECT {
 			Bottom: int32(bottoms[i]),
 		})
 	}
+	result[len(result)-1] = final
 	return result
 }
 
@@ -332,6 +337,13 @@ type POINT struct {
 	X, Y LONG
 }
 
+func (p1 POINT) DistanceTo(p2 POINT) float64 {
+	x1 := float64(p1.X)
+	x2 := float64(p2.X)
+	y1 := float64(p1.Y)
+	y2 := float64(p2.Y)
+	return math.Sqrt(math.Pow(x1-x2, 2) + math.Pow(y1-y2, 2))
+}
 func (p POINT) Add(p2 POINT) POINT {
 	return POINT{X: p.X + p2.X, Y: p.Y + p2.Y}
 }
