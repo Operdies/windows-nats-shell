@@ -78,7 +78,7 @@ type KeyEventCode = int
 
 const (
 	HC_ACTION   KeyEventCode = 0
-	HC_NOREMOVE              = 3
+	HC_NOREMOVE KeyEventCode = 3
 )
 
 // hshell codes
@@ -86,17 +86,17 @@ const (
 type WM_SHELL_CODE = int
 
 const (
+	HSHELL_WINDOWCREATED       WM_SHELL_CODE = 1
+	HSHELL_WINDOWDESTROYED     WM_SHELL_CODE = 2
+	HSHELL_ACTIVATESHELLWINDOW WM_SHELL_CODE = 3
+	HSHELL_WINDOWACTIVATED     WM_SHELL_CODE = 4
+	HSHELL_GETMINRECT          WM_SHELL_CODE = 5
+	HSHELL_REDRAW              WM_SHELL_CODE = 6
+	HSHELL_TASKMAN             WM_SHELL_CODE = 7
+	HSHELL_LANGUAGE            WM_SHELL_CODE = 8
 	HSHELL_ACCESSIBILITYSTATE  WM_SHELL_CODE = 11
-	HSHELL_ACTIVATESHELLWINDOW               = 3
-	HSHELL_APPCOMMAND                        = 12
-	HSHELL_GETMINRECT                        = 5
-	HSHELL_LANGUAGE                          = 8
-	HSHELL_REDRAW                            = 6
-	HSHELL_TASKMAN                           = 7
-	HSHELL_WINDOWACTIVATED                   = 4
-	HSHELL_WINDOWCREATED                     = 1
-	HSHELL_WINDOWDESTROYED                   = 2
-	HSHELL_WINDOWREPLACED                    = 13
+	HSHELL_APPCOMMAND          WM_SHELL_CODE = 12
+	HSHELL_WINDOWREPLACED      WM_SHELL_CODE = 13
 )
 
 func WhShellEvent(nCode WM_SHELL_CODE, wParam uintptr, lParam uintptr) ShellEventInfo {

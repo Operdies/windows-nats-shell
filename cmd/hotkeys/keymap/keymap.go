@@ -36,10 +36,10 @@ type mod string
 
 const (
 	alt   mod = "alt"
-	none      = ""
-	ctrl      = "ctrl"
-	win       = "win"
-	shift     = "shift"
+	none  mod = ""
+	ctrl  mod = "ctrl"
+	win   mod = "win"
+	shift mod = "shift"
 )
 
 var (

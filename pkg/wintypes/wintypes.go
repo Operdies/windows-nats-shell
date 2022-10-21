@@ -51,41 +51,41 @@ const (
 	// Sets a new extended window style.
 	GWL_EXSTYLE GWL_INDEX = -20
 	// Sets a new application instance handle.
-	GWL_HINSTANCE = -6
+	GWL_HINSTANCE GWL_INDEX = -6
 	// Sets a new identifier of the child window. The window cannot be a top-level window.
-	GWL_ID = -12
+	GWL_ID GWL_INDEX = -12
 	// Sets a new window style.
-	GWL_STYLE = -16
+	GWL_STYLE GWL_INDEX = -16
 	// Sets the user data associated with the window. This data is intended for use by the application that created the window. Its value is initially zero.
-	GWL_USERDATA = -21
+	GWL_USERDATA GWL_INDEX = -21
 	// Sets a new address for the window procedure.
 	// You cannot change this attribute if the window does not belong to the same process as the calling thread.
-	GWL_WNDPROC = -4
+	GWL_WNDPROC GWL_INDEX = -4
 )
 
 const (
 	SW_HIDE            N_CMD_SHOW = 0
-	SW_SHOWNORMAL                 = 1
-	SW_NORMAL                     = 1
-	SW_SHOWMINIMIZED              = 2
-	SW_SHOWMAZIMIZED              = 3
-	SW_MAZIMIZED                  = 3
-	SW_SHOWNOACTIVATE             = 4
-	SW_SHOW                       = 5
-	SW_MINIMIZE                   = 6
-	SW_SHOWMINNOACTIVE            = 7
-	SW_SHOWNA                     = 8
-	SW_RESTORE                    = 9
-	SW_SHOWDEFAULT                = 10
-	SW_FORCEMINIMIZE              = 11
+	SW_SHOWNORMAL      N_CMD_SHOW = 1
+	SW_NORMAL          N_CMD_SHOW = 1
+	SW_SHOWMINIMIZED   N_CMD_SHOW = 2
+	SW_SHOWMAZIMIZED   N_CMD_SHOW = 3
+	SW_MAZIMIZED       N_CMD_SHOW = 3
+	SW_SHOWNOACTIVATE  N_CMD_SHOW = 4
+	SW_SHOW            N_CMD_SHOW = 5
+	SW_MINIMIZE        N_CMD_SHOW = 6
+	SW_SHOWMINNOACTIVE N_CMD_SHOW = 7
+	SW_SHOWNA          N_CMD_SHOW = 8
+	SW_RESTORE         N_CMD_SHOW = 9
+	SW_SHOWDEFAULT     N_CMD_SHOW = 10
+	SW_FORCEMINIMIZE   N_CMD_SHOW = 11
 )
 
 const (
 	WH_KEYBOARD    WH_EVENTTYPE = 2
-	WH_KEYBOARD_LL              = 13
-	WH_MOUSE_LL                 = 14
-	WH_CALLWNDPROC              = 4
-	WH_SHELL                    = 10
+	WH_KEYBOARD_LL WH_EVENTTYPE = 13
+	WH_MOUSE_LL    WH_EVENTTYPE = 14
+	WH_CALLWNDPROC WH_EVENTTYPE = 4
+	WH_SHELL       WH_EVENTTYPE = 10
 )
 
 const (
@@ -102,6 +102,7 @@ const (
 	FALSE                 = 0
 )
 
+// The window sizing and positioning flags.  see https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos
 type SWP = uint
 
 const (
@@ -109,46 +110,46 @@ const (
 	SWP_ASYNCWINDOWPOS SWP = 0x4000
 
 	//	Prevents generation of the WM_SYNCPAINT message.
-	SWP_DEFERERASE = 0x2000
+	SWP_DEFERERASE SWP = 0x2000
 
 	//	Draws a frame (defined in the window's class description) around the window.
-	SWP_DRAWFRAME = 0x0020
+	SWP_DRAWFRAME SWP = 0x0020
 
 	//	Applies new frame styles set using the SetWindowLong function. Sends a WM_NCCALCSIZE message to the window, even if the window's size is not being changed. If this flag is not specified, WM_NCCALCSIZE is sent only when the window's size is being changed.
-	SWP_FRAMECHANGED = 0x0020
+	SWP_FRAMECHANGED SWP = 0x0020
 
 	//	Hides the window.
-	SWP_HIDEWINDOW = 0x0080
+	SWP_HIDEWINDOW SWP = 0x0080
 
 	//	Does not activate the window. If this flag is not set, the window is activated and moved to the top of either the topmost or non-topmost group (depending on the setting of the hWndInsertAfter parameter).
-	SWP_NOACTIVATE = 0x0010
+	SWP_NOACTIVATE SWP = 0x0010
 
 	//	Discards the entire contents of the client area. If this flag is not specified, the valid contents of the client area are saved and copied back into the client area after the window is sized or repositioned.
-	SWP_NOCOPYBITS = 0x0100
+	SWP_NOCOPYBITS SWP = 0x0100
 
 	//	Retains the current position (ignores X and Y parameters).
-	SWP_NOMOVE = 0x0002
+	SWP_NOMOVE SWP = 0x0002
 
 	//	Does not change the owner window's position in the Z order.
-	SWP_NOOWNERZORDER = 0x0200
+	SWP_NOOWNERZORDER SWP = 0x0200
 
 	//	Does not redraw changes. If this flag is set, no repainting of any kind occurs. This applies to the client area, the nonclient area (including the title bar and scroll bars), and any part of the parent window uncovered as a result of the window being moved. When this flag is set, the application must explicitly invalidate or redraw any parts of the window and parent window that need redrawing.
-	SWP_NOREDRAW = 0x0008
+	SWP_NOREDRAW SWP = 0x0008
 
 	//	Same as the SWP_NOOWNERZORDER flag.
-	SWP_NOREPOSITION = 0x0200
+	SWP_NOREPOSITION SWP = 0x0200
 
 	//	Prevents the window from receiving the WM_WINDOWPOSCHANGING message.
-	SWP_NOSENDCHANGING = 0x0400
+	SWP_NOSENDCHANGING SWP = 0x0400
 
 	//	Retains the current size (ignores the cx and cy parameters).
-	SWP_NOSIZE = 0x0001
+	SWP_NOSIZE SWP = 0x0001
 
 	//	Retains the current Z order (ignores the hWndInsertAfter parameter).
-	SWP_NOZORDER = 0x0004
+	SWP_NOZORDER SWP = 0x0004
 
 	//	Displays the window.
-	SWP_SHOWWINDOW = 0x0040
+	SWP_SHOWWINDOW SWP = 0x0040
 )
 
 func SUCCEEDED(code HRESULT) bool {
@@ -159,25 +160,25 @@ func SUCCEEDED(code HRESULT) bool {
 }
 
 const (
-	ASSOCF_NONE                 AssocF = 0x00000000
-	ASSOCF_INIT_NOREMAPCLSID           = 0x00000001
-	ASSOCF_INIT_BYEXENAME              = 0x00000002
-	ASSOCF_OPEN_BYEXENAME              = 0x00000002
-	ASSOCF_INIT_DEFAULTTOSTAR          = 0x00000004
-	ASSOCF_INIT_DEFAULTTOFOLDER        = 0x00000008
-	ASSOCF_NOUSERSETTINGS              = 0x00000010
-	ASSOCF_NOTRUNCATE                  = 0x00000020
-	ASSOCF_VERIFY                      = 0x00000040
-	ASSOCF_REMAPRUNDLL                 = 0x00000080
-	ASSOCF_NOFIXUPS                    = 0x00000100
-	ASSOCF_IGNOREBASECLASS             = 0x00000200
-	ASSOCF_INIT_IGNOREUNKNOWN          = 0x00000400
-	ASSOCF_INIT_FIXED_PROGID           = 0x00000800
-	ASSOCF_IS_PROTOCOL                 = 0x00001000
+	ASSOCF_INIT_NOREMAPCLSID AssocF = 1 << iota
+	ASSOCF_INIT_BYEXENAME
+	ASSOCF_INIT_DEFAULTTOSTAR
+	ASSOCF_INIT_DEFAULTTOFOLDER
+	ASSOCF_NOUSERSETTINGS
+	ASSOCF_NOTRUNCATE
+	ASSOCF_VERIFY
+	ASSOCF_REMAPRUNDLL
+	ASSOCF_NOFIXUPS
+	ASSOCF_IGNOREBASECLASS
+	ASSOCF_INIT_IGNOREUNKNOWN
+	ASSOCF_INIT_FIXED_PROGID
+	ASSOCF_IS_PROTOCOL
+	ASSOCF_OPEN_BYEXENAME        = ASSOCF_INIT_BYEXENAME
+	ASSOCF_NONE           AssocF = 0
 )
 
 const (
-	ASSOCSTR_COMMAND AssocStr = 1
+	ASSOCSTR_COMMAND AssocStr = iota + 1
 	ASSOCSTR_EXECUTABLE
 	ASSOCSTR_FRIENDLYDOCNAME
 	ASSOCSTR_FRIENDLYAPPNAME
@@ -354,78 +355,78 @@ func (p POINT) Sub(p2 POINT) POINT {
 type GW_CMD = uint
 
 const (
-	GW_HWNDFIRST    GW_CMD = 0
-	GW_HWNDLAST            = 1
-	GW_HWNDNEXT            = 2
-	GW_HWNDPREV            = 3
-	GW_OWNER               = 4
-	GW_CHILD               = 5
-	GW_ENABLEDPOPUP        = 6
+	GW_HWNDFIRST GW_CMD = iota
+	GW_HWNDLAST
+	GW_HWNDNEXT
+	GW_HWNDPREV
+	GW_OWNER
+	GW_CHILD
+	GW_ENABLEDPOPUP
 )
 
 type GA_FLAGS = uint
 
 const (
-	GA_PARENT    GA_FLAGS = 1
-	GA_ROOT               = 2
-	GA_ROOTOWNER          = 3
+	GA_PARENT GA_FLAGS = iota + 1
+	GA_ROOT
+	GA_ROOTOWNER
 )
 
 type WS_STYLES = uint64
 
 const (
 	// The window has a thin-line border
-	WS_BORDER = 0x00800000
+	WS_BORDER WS_STYLES = 0x00800000
 	// The window has a title bar (includes the WS_BORDER style).
-	WS_CAPTION = 0x00C00000
+	WS_CAPTION WS_STYLES = 0x00C00000
 	// The window is a child window. A window with this style cannot have a menu bar. This style cannot be used with the WS_POPUP style.
-	WS_CHILD = 0x40000000
+	WS_CHILD WS_STYLES = 0x40000000
 	// Same as the WS_CHILD style.
-	WS_CHILDWINDOW = 0x40000000
+	WS_CHILDWINDOW WS_STYLES = 0x40000000
 	// Excludes the area occupied by child windows when drawing occurs within the parent window. This style is used when creating the parent window.
-	WS_CLIPCHILDREN = 0x02000000
+	WS_CLIPCHILDREN WS_STYLES = 0x02000000
 	// Clips child windows relative to each other; that is, when a particular child window receives a WM_PAINT message, the WS_CLIPSIBLINGS style clips all other overlapping child windows out of the region of the child window to be updated. If WS_CLIPSIBLINGS is not specified and child windows overlap, it is possible, when drawing within the client area of a child window, to draw within the client area of a neighboring child window.
-	WS_CLIPSIBLINGS = 0x04000000
+	WS_CLIPSIBLINGS WS_STYLES = 0x04000000
 	// The window is initially disabled. A disabled window cannot receive input from the user. To change this after a window has been created, use the EnableWindow function.
-	WS_DISABLED = 0x08000000
+	WS_DISABLED WS_STYLES = 0x08000000
 	// The window has a border of a style typically used with dialog boxes. A window with this style cannot have a title bar.
-	WS_DLGFRAME = 0x00400000
+	WS_DLGFRAME WS_STYLES = 0x00400000
 	// The window is the first control of a group of controls. The group consists of this first control and all controls defined after it, up to the next control with the WS_GROUP style. The first control in each group usually has the WS_TABSTOP style so that the user can move from group to group. The user can subsequently change the keyboard focus from one control in the group to the next control in the group by using the direction keys. You can turn this style on and off to change dialog box navigation. To change this style after a window has been created, use the SetWindowLong function.
-	WS_GROUP = 0x00020000
+	WS_GROUP WS_STYLES = 0x00020000
 	// The window has a horizontal scroll bar.
-	WS_HSCROLL = 0x00100000
+	WS_HSCROLL WS_STYLES = 0x00100000
 	// The window is initially minimized. Same as the WS_MINIMIZE style.
-	WS_ICONIC = 0x20000000
+	WS_ICONIC WS_STYLES = 0x20000000
 	// The window is initially maximized.
-	WS_MAXIMIZE = 0x01000000
+	WS_MAXIMIZE WS_STYLES = 0x01000000
 	// The window has a maximize button. Cannot be combined with the WS_EX_CONTEXTHELP style. The WS_SYSMENU style must also be specified.
-	WS_MAXIMIZEBOX = 0x00010000
+	WS_MAXIMIZEBOX WS_STYLES = 0x00010000
 	// The window is initially minimized. Same as the WS_ICONIC style.
-	WS_MINIMIZE = 0x20000000
+	WS_MINIMIZE WS_STYLES = 0x20000000
 	// The window has a minimize button. Cannot be combined with the WS_EX_CONTEXTHELP style. The WS_SYSMENU style must also be specified.
-	WS_MINIMIZEBOX = 0x00020000
+	WS_MINIMIZEBOX WS_STYLES = 0x00020000
 	// The window is an overlapped window. An overlapped window has a title bar and a border. Same as the WS_TILED style.
-	WS_OVERLAPPED = 0x00000000
+	WS_OVERLAPPED WS_STYLES = 0x00000000
 	// The window is an overlapped window. Same as the WS_TILEDWINDOW style.
-	WS_OVERLAPPEDWINDOW = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
+	WS_OVERLAPPEDWINDOW WS_STYLES = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
 	// The window is a pop-up window. This style cannot be used with the WS_CHILD style.
-	WS_POPUP = 0x80000000
+	WS_POPUP WS_STYLES = 0x80000000
 	// The window is a pop-up window. The WS_CAPTION and WS_POPUPWINDOW styles must be combined to make the window menu visible.
-	WS_POPUPWINDOW = WS_POPUP | WS_BORDER | WS_SYSMENU
+	WS_POPUPWINDOW WS_STYLES = WS_POPUP | WS_BORDER | WS_SYSMENU
 	// The window has a sizing border. Same as the WS_THICKFRAME style.
-	WS_SIZEBOX = 0x00040000
+	WS_SIZEBOX WS_STYLES = 0x00040000
 	// The window has a window menu on its title bar. The WS_CAPTION style must also be specified.
-	WS_SYSMENU = 0x00080000
+	WS_SYSMENU WS_STYLES = 0x00080000
 	// The window is a control that can receive the keyboard focus when the user presses the TAB key. Pressing the TAB key changes the keyboard focus to the next control with the WS_TABSTOP style. You can turn this style on and off to change dialog box navigation. To change this style after a window has been created, use the SetWindowLong function. For user-created windows and modeless dialogs to work with tab stops, alter the message loop to call the IsDialogMessage function.
-	WS_TABSTOP = 0x00010000
+	WS_TABSTOP WS_STYLES = 0x00010000
 	// The window has a sizing border. Same as the WS_SIZEBOX style.
-	WS_THICKFRAME = 0x00040000
+	WS_THICKFRAME WS_STYLES = 0x00040000
 	// The window is an overlapped window. An overlapped window has a title bar and a border. Same as the WS_OVERLAPPED style.
-	WS_TILED = 0x00000000
+	WS_TILED WS_STYLES = 0x00000000
 	// The window is an overlapped window. Same as the WS_OVERLAPPEDWINDOW style.
-	WS_TILEDWINDOW = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
+	WS_TILEDWINDOW WS_STYLES = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
 	// The window is initially visible. This style can be turned on and off by using the ShowWindow or SetWindowPos function.
-	WS_VISIBLE = 0x10000000
+	WS_VISIBLE WS_STYLES = 0x10000000
 	// The window has a vertical scroll bar.
-	WS_VSCROLL = 0x00200000
+	WS_VSCROLL WS_STYLES = 0x00200000
 )

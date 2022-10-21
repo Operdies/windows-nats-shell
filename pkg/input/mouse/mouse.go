@@ -22,12 +22,12 @@ type MouseAction = uint32
 
 const (
 	MOUSEMOVE   MouseAction = 0x200
-	LBUTTONDOWN             = 0x201
-	LBUTTONUP               = 0x202
-	RBUTTONDOWN             = 0x204
-	RBUTTONUP               = 0x205
-	VMOUSEWHEEL             = 0x20A
-	HMOUSEWHEEL             = 0x20E
+	LBUTTONDOWN MouseAction = 0x201
+	LBUTTONUP   MouseAction = 0x202
+	RBUTTONDOWN MouseAction = 0x204
+	RBUTTONUP   MouseAction = 0x205
+	VMOUSEWHEEL MouseAction = 0x20A
+	HMOUSEWHEEL MouseAction = 0x20E
 )
 
 type MouseEventInfo struct {

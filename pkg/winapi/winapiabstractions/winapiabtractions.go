@@ -103,6 +103,9 @@ func SetWindowRect(hwnd wintypes.HWND, target wintypes.RECT, resize bool) {
 	if !resize {
 		styles |= wintypes.SWP_NOSIZE
 	}
+	if resize {
+		// styles |= wintypes.SWP_ASYNCWINDOWPOS
+	}
 	winapi.SetWindowPos(hwnd, 0, int(target.Left), int(target.Top), int(target.Width()), int(target.Height()), uint(styles))
 }
 
@@ -149,6 +152,6 @@ func ToggleBorder(hwnd wintypes.HWND) bool {
 }
 
 func WindowMinimized(hwnd wintypes.HWND) bool {
-	styles := winapi.GetWindowLong(hwnd, wintypes.GWL_STYLE)
+	styles := uint64(winapi.GetWindowLong(hwnd, wintypes.GWL_STYLE))
 	return styles&wintypes.WS_MINIMIZE == wintypes.WS_MINIMIZE
 }

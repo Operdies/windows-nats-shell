@@ -6,11 +6,13 @@ import (
 	"strings"
 )
 
+type color = string
+
 const (
-	Purple = "00ac21c4"
-	Red    = "f00"
-	Green  = "0f0"
-	Blue   = "00f"
+	Purple color = "00ac21c4"
+	Red    color = "f00"
+	Green  color = "0f0"
+	Blue   color = "00f"
 )
 
 func StringToColor(s string) (color [4]float32, err error) {

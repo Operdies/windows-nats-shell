@@ -40,14 +40,14 @@ const (
 type WindowCardinals = int
 
 const (
-	Top         WindowCardinals = 0b0001
-	Left                        = 0b0010
-	Bottom                      = 0b0100
-	Right                       = 0b1000
-	TopLeft                     = Top | Left
-	TopRight                    = Top | Right
-	BottomLeft                  = Bottom | Left
-	BottomRight                 = Bottom | Right
+	Top WindowCardinals = 1 << iota
+	Left
+	Bottom
+	Right
+	TopLeft     = Top | Left
+	TopRight    = Top | Right
+	BottomLeft  = Bottom | Left
+	BottomRight = Bottom | Right
 )
 
 // Given a cardinal direction, get a point representing that direction on the rectangle
