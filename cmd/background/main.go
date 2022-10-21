@@ -12,7 +12,7 @@ import (
 	"github.com/operdies/windows-nats-shell/cmd/background/gfx"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
-	"github.com/operdies/windows-nats-shell/pkg/winapi/winapiabstractions"
+	wia "github.com/operdies/windows-nats-shell/pkg/winapi/winapiabstractions"
 )
 
 func init() {
@@ -93,6 +93,11 @@ func main() {
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
 	glfw.WindowHint(glfw.DoubleBuffer, glfw.False)
 
+	glfw.WindowHint(glfw.Focused, glfw.False)
+	glfw.WindowHint(glfw.FocusOnShow, glfw.False)
+	glfw.WindowHint(glfw.Floating, glfw.True)
+	glfw.WindowHint(glfw.TransparentFramebuffer, glfw.True)
+
 	mon := glfw.GetPrimaryMonitor()
 	_, _, width, height := mon.GetWorkarea()
 
@@ -124,20 +129,20 @@ func main() {
 	render := make(chan bool)
 
 	_, err = nc.Subscribe.WH_SHELL(func(ci shell.ShellEventInfo) {
-		winapiabstractions.SetBottomMost(hwnd)
+		wia.SetBottomMost(hwnd)
 		render <- true
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	winapiabstractions.MakeToolWindow(hwnd)
-	winapiabstractions.SetBottomMost(hwnd)
+	wia.MakeToolWindow(hwnd)
+	wia.SetBottomMost(hwnd)
 	window.SetMouseButtonCallback(func(w *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
 		// Writing to a channel seems to cause a deadlock.
 		// It works fine when doing it from a goroutine. Strange
 		go func() {
-			winapiabstractions.SetBottomMost(hwnd)
+			wia.SetBottomMost(hwnd)
 			render <- true
 		}()
 	})

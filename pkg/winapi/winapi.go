@@ -62,7 +62,7 @@ func GetWindowLong(hwnd wintypes.HWND, index wintypes.GWL_INDEX) wintypes.GWL_IN
 	return int32(r)
 }
 
-func SetWindowLongA(hwnd windows.HWND, index wintypes.GWL_INDEX, dwNewLong wintypes.LONG) (wintypes.LONG, error) {
+func SetWindowLongA(hwnd wintypes.HWND, index wintypes.GWL_INDEX, dwNewLong wintypes.LONG) (wintypes.LONG, error) {
 	r, _, err := setWindowLongA.Call(uintptr(hwnd), uintptr(index), uintptr(dwNewLong))
 	if r == 0 {
 		return 0, err
