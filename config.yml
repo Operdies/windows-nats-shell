@@ -64,9 +64,9 @@ services:
     layout: revolver
     actionkey: nullkey
     cyclekey: alt
-    scalex: 0.95
-    scaley: 0.95
-    padding: 50
+    scalex: 0.99
+    scaley: 0.98
+    padding: 30
     smallscale: 0.5
     perimeter: 0.7
     animationframes: 100

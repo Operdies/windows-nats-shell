@@ -115,7 +115,7 @@ func ListenIndefinitely() {
 		if h == 0 {
 			h = winapi.GetForegroundWindow()
 		}
-		return winapiabstractions.ShowBorder(h)
+		return winapiabstractions.RestoreStyles(h)
 	})
 	nc.Subscribe.ToggleBorder(func(h wintypes.HWND) bool {
 		if h == 0 {

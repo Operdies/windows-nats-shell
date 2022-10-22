@@ -2,6 +2,7 @@ package winapiabstractions
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 	"unsafe"
@@ -144,22 +145,104 @@ func AnimateRectWithContext(hwnd wintypes.HWND, steps []windows2.Rect, ctx conte
 	}
 }
 
-func HideBorder(hwnd wintypes.HWND) bool {
-	winapicgo.DisableBorders(hwnd)
-	return true
-}
-
-func ShowBorder(hwnd wintypes.HWND) bool {
-	winapicgo.EnableBorders(hwnd)
-	return true
-}
-
-func ToggleBorder(hwnd wintypes.HWND) bool {
-	winapicgo.ToggleBorders(hwnd)
-	return true
-}
-
 func WindowMinimized(hwnd wintypes.HWND) bool {
 	styles := uint64(winapi.GetWindowLong(hwnd, wintypes.GWL_STYLE))
 	return styles&wintypes.WS_MINIMIZE == wintypes.WS_MINIMIZE
 }
+
+func HideBorder(hwnd wintypes.HWND) bool {
+	styles := winapi.GetWindowLong(hwnd, wintypes.GWL_STYLE)
+	exStyles := winapi.GetWindowLong(hwnd, wintypes.GWL_EXSTYLE)
+	windowStyles[hwnd] = uint64(styles)
+	windowExStyles[hwnd] = uint64(exStyles)
+	styles &= ^int32(wintypes.WS_TILEDWINDOW)
+	exStyles &= ^int32(wintypes.WS_EX_OVERLAPPEDWINDOW)
+	winapi.SetWindowLongA(hwnd, wintypes.GWL_STYLE, wintypes.LONG(styles))
+	winapi.SetWindowLongA(hwnd, wintypes.GWL_EXSTYLE, wintypes.LONG(exStyles))
+	Redraw(hwnd)
+	borderMap[hwnd] = false
+	fmt.Printf("destroy: %v\n", hwnd)
+	return true
+}
+
+func RestoreStyles(hwnd wintypes.HWND) bool {
+	styles, ok := windowStyles[hwnd]
+	if !ok {
+		return false
+	}
+	exStyles, ok := windowExStyles[hwnd]
+	if !ok {
+		return false
+	}
+	winapi.SetWindowLongA(hwnd, wintypes.GWL_STYLE, wintypes.LONG(styles))
+	winapi.SetWindowLongA(hwnd, wintypes.GWL_EXSTYLE, wintypes.LONG(exStyles))
+	Redraw(hwnd)
+	borderMap[hwnd] = true
+	fmt.Printf("restore: %v\n", hwnd)
+	return true
+}
+
+func ToggleBorder(hwnd wintypes.HWND) bool {
+	if BordersEnabled(hwnd) {
+		HideBorder(hwnd)
+	} else {
+		RestoreStyles(hwnd)
+	}
+	return true
+}
+
+var (
+	borderMap      = map[wintypes.HWND]bool{}
+	windowStyles   = map[wintypes.HWND]wintypes.WS_STYLES{}
+	windowExStyles = map[wintypes.HWND]wintypes.WS_EX_STYLES{}
+)
+
+func BordersEnabled(h wintypes.HWND) bool {
+	b, ok := borderMap[h]
+	if ok {
+		return b
+	}
+
+	return true
+}
+
+func Redraw(h wintypes.HWND) {
+	winapi.SetWindowPos(h, 0, 0, 0, 0, 0, wintypes.SWP_FRAMECHANGED|wintypes.SWP_NOMOVE|wintypes.SWP_NOSIZE|wintypes.SWP_NOZORDER|wintypes.SWP_NOOWNERZORDER)
+}
+
+// var (
+// 	BorderlessStyles   C.long = C.WS_CAPTION | C.WS_THICKFRAME | C.WS_MINIMIZEBOX | C.WS_MAXIMIZEBOX | C.WS_SYSMENU
+// 	BorderlessExStyles C.long = 0 // C.WS_EX_DLGMODALFRAME | C.WS_EX_CLIENTEDGE | C.WS_EX_STATICEDGE
+// 	RedrawFlags        C.uint = C.SWP_FRAMECHANGED | C.SWP_NOMOVE | C.SWP_NOSIZE | C.SWP_NOZORDER | C.SWP_NOOWNERZORDER
+// )
+
+// func EnableBorders(h wintypes.HWND) {
+// 	hwnd := toCType(h)
+// 	var lStyle C.long
+// 	lStyle = C.GetWindowLong(hwnd, C.GWL_STYLE)
+// 	lStyle |= BorderlessStyles
+// 	C.SetWindowLong(hwnd, C.GWL_STYLE, lStyle)
+//
+// 	var eStyle C.long
+// 	eStyle = C.GetWindowLong(hwnd, C.GWL_EXSTYLE)
+// 	eStyle |= BorderlessExStyles
+// 	C.SetWindowLong(hwnd, C.GWL_EXSTYLE, eStyle)
+// 	redrawWindow(h)
+// }
+//
+// func DisableBorders(h wintypes.HWND) {
+// 	hwnd := toCType(h)
+// 	lStyle := C.GetWindowLong(hwnd, C.GWL_STYLE)
+// 	lStyle &= ^BorderlessStyles
+// 	C.SetWindowLong(hwnd, C.GWL_STYLE, lStyle)
+//
+// 	eStyle := C.GetWindowLong(hwnd, C.GWL_EXSTYLE)
+// 	eStyle &= ^BorderlessExStyles
+// 	C.SetWindowLong(hwnd, C.GWL_EXSTYLE, eStyle)
+// 	redrawWindow(h)
+// }
+//
+// func redrawWindow(h wintypes.HWND) {
+// 	hwnd := toCType(h)
+// 	C.SetWindowPos(hwnd, nil, 0, 0, 0, 0, RedrawFlags)
+// }
