@@ -150,11 +150,18 @@ func WindowMinimized(hwnd wintypes.HWND) bool {
 	return styles&wintypes.WS_MINIMIZE == wintypes.WS_MINIMIZE
 }
 
+// Save `value` in `m[`key`]` only if key does not exist
+func maybeSave(m map[wintypes.HWND]uint64, value uint64, key wintypes.HWND) {
+	if _, ok := m[key]; !ok {
+		m[key] = value
+	}
+}
+
 func HideBorder(hwnd wintypes.HWND) bool {
 	styles := winapi.GetWindowLong(hwnd, wintypes.GWL_STYLE)
 	exStyles := winapi.GetWindowLong(hwnd, wintypes.GWL_EXSTYLE)
-	windowStyles[hwnd] = uint64(styles)
-	windowExStyles[hwnd] = uint64(exStyles)
+	maybeSave(windowStyles, uint64(styles), hwnd)
+	maybeSave(windowExStyles, uint64(exStyles), hwnd)
 	styles &= ^int32(wintypes.WS_TILEDWINDOW)
 	exStyles &= ^int32(wintypes.WS_EX_OVERLAPPEDWINDOW)
 	winapi.SetWindowLongA(hwnd, wintypes.GWL_STYLE, wintypes.LONG(styles))
@@ -163,6 +170,25 @@ func HideBorder(hwnd wintypes.HWND) bool {
 	borderMap[hwnd] = false
 	fmt.Printf("destroy: %v\n", hwnd)
 	return true
+}
+
+func mkCallback() wintypes.WNDPROC {
+	return func(h wintypes.HWND, u uint32, w wintypes.WPARAM, l wintypes.LPARAM) wintypes.LRESULT {
+		if u == wintypes.WM_NCHITTEST {
+			fmt.Printf("nowhere pog\n")
+			return wintypes.LRESULT(wintypes.HTTRANSPARENT)
+		}
+		return winapi.DefWindowProcA(h, uint(u), w, l)
+	}
+}
+
+func MakeClickThrough(hwnd wintypes.HWND) {
+	exStyles := winapi.GetWindowLong(hwnd, wintypes.GWL_EXSTYLE)
+	maybeSave(windowExStyles, uint64(exStyles), hwnd)
+	exStyles |= int32(wintypes.WS_EX_LAYERED | wintypes.WS_EX_TRANSPARENT)
+	winapi.SetWindowLongA(hwnd, wintypes.GWL_EXSTYLE, wintypes.LONG(exStyles))
+	cb := windows.NewCallback(mkCallback())
+	winapi.SetWindowLongPtrA(hwnd, int(wintypes.GWL_WNDPROC), cb)
 }
 
 func RestoreStyles(hwnd wintypes.HWND) bool {

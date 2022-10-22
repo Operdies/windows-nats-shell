@@ -37,6 +37,9 @@ var (
 	systemParametersInfoA    = user32.MustFindProc("SystemParametersInfoA")
 	getWindowLongA           = user32.MustFindProc("GetWindowLongA")
 	setWindowLongA           = user32.MustFindProc("SetWindowLongA")
+	setWindowLongPtrA        = user32.MustFindProc("SetWindowLongPtrA")
+
+	defWindowProcA = user32.MustFindProc("DefWindowProcA")
 
 	getMessageW      = user32.MustFindProc("GetMessageW")
 	translateMessage = user32.MustFindProc("TranslateMessage")
@@ -57,6 +60,16 @@ var (
 	Shlwapi          = windows.MustLoadDLL("Shlwapi.dll")
 	assocQueryString = Shlwapi.MustFindProc("AssocQueryStringA")
 )
+
+func SetWindowLongPtrA(hwnd wintypes.HWND, nIndex int, dwNewLong uintptr) uintptr {
+	r, _, _ := setWindowLongPtrA.Call(uintptr(hwnd), uintptr(nIndex), dwNewLong)
+	return r
+}
+
+func DefWindowProcA(hwnd wintypes.HWND, msg uint, wparam wintypes.WPARAM, lparam wintypes.LPARAM) wintypes.LRESULT {
+	r, _, _ := defWindowProcA.Call(uintptr(hwnd), uintptr(msg), uintptr(wparam), uintptr(lparam))
+	return wintypes.LRESULT(r)
+}
 
 func GetWindowLong(hwnd wintypes.HWND, index wintypes.GWL_INDEX) wintypes.GWL_INDEX {
 	r, _, _ := getWindowLongA.Call(uintptr(hwnd), uintptr(index))

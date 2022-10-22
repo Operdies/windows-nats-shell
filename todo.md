@@ -37,18 +37,24 @@ Make an API to kill a process by its handle
 ## Background
 
 API for posting data (images or text) to the background. TBD: pre-configured zones or defined per request / client?
+Should this API support different segments to have different Z-orders (even drawing on top of windows?)
+* Status bar 
+Now that we have pseudo-tiling and padding, we can start working on a status bar. 
+The taskbar should probably be drawn on top of windows because the alternative would mess with Revolver
+
+## Notification system 
+
+This goes hand in hand with posting to the background. In general, we really need a text shader.
+A text shader will also enable launchers etc
 
 ## Window manager
 
 Some (toggle-able) way to automatically tile windows. BSPC inspired layouts
 Cycle between revolver strategy, tall mode, and monocle mode -- revolver with max size is monocle..
-Disable borders on all windows (maybe with hotkey to enable currently focused window?)
 
 * add toggle for auto-layout
-* swap main / secondary windows when a window is manually switched (alt-tab or click)
-  - Respect manual order overrides when manually swapping
 * Highlight border of focused window 
-* Avoid removing borders from windows that don't have a border in the first place (chrome, steam) -- figure out how to detect this?
+** glfw 3.4 adds click-through windows, but it might not be released for a while, and is not available in go-glfw
 
 * Make abstractions more sane -- inputhandler duplicates hotkey functionality
 * a lot of `cmd/*` code is generic and could be moved to a suitable package
@@ -66,6 +72,8 @@ Would make the shell usable without a linux driver. The shortcut manager needs t
 ## System Tray
 
 I don't really like trays but I guess I need them. Place them on background?
+-- Tray icons may not even be possible without explorer? It seems they are very tightly integrated with 
+-- exlorer.exe Investigate if the tray icon API calls can be intercepted
 
 ## Bugs 
 

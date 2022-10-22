@@ -360,3 +360,63 @@ const (
 	// The window has a border with a raised edge.
 	WS_EX_WINDOWEDGE WS_EX_STYLES = 0x00000100
 )
+
+// see: https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest
+const WM_NCHITTEST = 0x0084
+
+type WM_NCHITTEST_R = int
+
+var (
+	// In the border of a window that does not have a sizing border.
+	HTBORDER WM_NCHITTEST_R = 18
+	// In the lower-horizontal border of a resizable window (the user can click the mouse to resize the window vertically).
+	HTBOTTOM WM_NCHITTEST_R = 15
+	// In the lower-left corner of a border of a resizable window (the user can click the mouse to resize the window diagonally).
+	HTBOTTOMLEFT WM_NCHITTEST_R = 16
+	// In the lower-right corner of a border of a resizable window (the user can click the mouse to resize the window diagonally).
+	HTBOTTOMRIGHT WM_NCHITTEST_R = 17
+	// In a title bar.
+	HTCAPTION WM_NCHITTEST_R = 2
+	// In a client area.
+	HTCLIENT WM_NCHITTEST_R = 1
+	// In a Close button.
+	HTCLOSE WM_NCHITTEST_R = 20
+	// On the screen background or on a dividing line between windows (same as HTNOWHERE, except that the DefWindowProc function produces a system beep to indicate an error).
+	HTERROR WM_NCHITTEST_R = -2
+	// In a size box (same as HTSIZE).
+	HTGROWBOX WM_NCHITTEST_R = 4
+	// In a Help button.
+	HTHELP WM_NCHITTEST_R = 21
+	// In a horizontal scroll bar.
+	HTHSCROLL WM_NCHITTEST_R = 6
+	// In the left border of a resizable window (the user can click the mouse to resize the window horizontally).
+	HTLEFT WM_NCHITTEST_R = 10
+	// In a menu.
+	HTMENU WM_NCHITTEST_R = 5
+	// In a Maximize button.
+	HTMAXBUTTON WM_NCHITTEST_R = 9
+	// In a Minimize button.
+	HTMINBUTTON WM_NCHITTEST_R = 8
+	// On the screen background or on a dividing line between windows.
+	HTNOWHERE WM_NCHITTEST_R = 0
+	// In a Minimize button.
+	HTREDUCE WM_NCHITTEST_R = 8
+	// In the right border of a resizable window (the user can click the mouse to resize the window horizontally).
+	HTRIGHT WM_NCHITTEST_R = 11
+	// In a size box (same as HTGROWBOX).
+	HTSIZE WM_NCHITTEST_R = 4
+	// In a window menu or in a Close button in a child window.
+	HTSYSMENU WM_NCHITTEST_R = 3
+	// In the upper-horizontal border of a window.
+	HTTOP WM_NCHITTEST_R = 12
+	// In the upper-left corner of a window border.
+	HTTOPLEFT WM_NCHITTEST_R = 13
+	// In the upper-right corner of a window border.
+	HTTOPRIGHT WM_NCHITTEST_R = 14
+	// In a window currently covered by another window in the same thread (the message will be sent to underlying windows in the same thread until one of them returns a code that is not HTTRANSPARENT).
+	HTTRANSPARENT WM_NCHITTEST_R = -1
+	// In the vertical scroll bar.
+	HTVSCROLL WM_NCHITTEST_R = 7
+	// In a Maximize button.
+	HTZOOM WM_NCHITTEST_R = 9
+)
