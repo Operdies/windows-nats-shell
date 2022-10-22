@@ -53,90 +53,6 @@ func (client Publisher) WindowsUpdated(w []wintypes.Window) {
 	client.nc.Publish(windows.WindowsUpdated, utils.EncodeAny(w))
 }
 
-// func (client Subscriber) MoveWindow(callback func(windows.MoveEvent) bool) (*nats.Subscription, error) {
-// 	return client.nc.Subscribe(windows.MoveWindow, func(msg *nats.Msg) {
-// 		result := callback(utils.DecodeAny[windows.MoveEvent](msg.Data))
-// 		msg.Respond(utils.EncodeAny(result))
-// 	})
-// }
-//
-// func (client Requester) MoveWindow(me windows.MoveEvent) bool {
-// 	msg, _ := client.nc.Request(windows.MoveWindow, utils.EncodeAny(me), client.timeout)
-// 	return utils.DecodeAny[bool](msg.Data)
-// }
-//
-// func (client Subscriber) ResizeWindow(callback func(windows.ResizeEvent) bool) (*nats.Subscription, error) {
-// 	return client.nc.Subscribe(windows.ResizeWindow, func(msg *nats.Msg) {
-// 		result := callback(utils.DecodeAny[windows.ResizeEvent](msg.Data))
-// 		msg.Respond(utils.EncodeAny(result))
-// 	})
-// }
-//
-// func (client Requester) ResizeWindow(resizeEvent windows.ResizeEvent) bool {
-// 	msg, _ := client.nc.Request(windows.ResizeWindow, utils.EncodeAny(resizeEvent), client.timeout)
-// 	return utils.DecodeAny[bool](msg.Data)
-// }
-
-func (client Subscriber) MinimizeWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
-	return client.nc.Subscribe(windows.MinimizeWindow, func(msg *nats.Msg) {
-		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
-		msg.Respond(utils.EncodeAny(result))
-	})
-}
-
-func (client Requester) MinimizeWindow(hwnd wintypes.HWND) bool {
-	msg, _ := client.nc.Request(windows.MinimizeWindow, utils.EncodeAny(hwnd), client.timeout)
-	return utils.DecodeAny[bool](msg.Data)
-}
-
-func (client Subscriber) RestoreWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
-	return client.nc.Subscribe(windows.RestoreWindow, func(msg *nats.Msg) {
-		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
-		msg.Respond(utils.EncodeAny(result))
-	})
-}
-
-func (client Requester) RestoreWindow(hwnd wintypes.HWND) bool {
-	msg, _ := client.nc.Request(windows.RestoreWindow, utils.EncodeAny(hwnd), client.timeout)
-	return utils.DecodeAny[bool](msg.Data)
-}
-
-func (client Subscriber) MaximizeWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
-	return client.nc.Subscribe(windows.MaximizeWindow, func(msg *nats.Msg) {
-		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
-		msg.Respond(utils.EncodeAny(result))
-	})
-}
-
-func (client Requester) MaximizeWindow(hwnd wintypes.HWND) bool {
-	msg, _ := client.nc.Request(windows.MaximizeWindow, utils.EncodeAny(hwnd), client.timeout)
-	return utils.DecodeAny[bool](msg.Data)
-}
-
-func (client Subscriber) FocusPrevious(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
-	return client.nc.Subscribe(windows.FocusPrevious, func(msg *nats.Msg) {
-		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
-		msg.Respond(utils.EncodeAny(result))
-	})
-}
-
-func (client Requester) FocusPrevious(hwnd wintypes.HWND) bool {
-	msg, _ := client.nc.Request(windows.FocusPrevious, utils.EncodeAny(hwnd), client.timeout)
-	return utils.DecodeAny[bool](msg.Data)
-}
-
-func (client Subscriber) FocusNext(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
-	return client.nc.Subscribe(windows.FocusNext, func(msg *nats.Msg) {
-		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
-		msg.Respond(utils.EncodeAny(result))
-	})
-}
-
-func (client Requester) FocusNext(hwnd wintypes.HWND) bool {
-	msg, _ := client.nc.Request(windows.FocusNext, utils.EncodeAny(hwnd), client.timeout)
-	return utils.DecodeAny[bool](msg.Data)
-}
-
 func (client Subscriber) HideBorder(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
 	return client.nc.Subscribe(windows.HideBorder, func(msg *nats.Msg) {
 		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
@@ -172,3 +88,88 @@ func (client Requester) ToggleBorder(hwnd wintypes.HWND) bool {
 	msg, _ := client.nc.Request(windows.ToggleBorder, utils.EncodeAny(hwnd), client.timeout)
 	return utils.DecodeAny[bool](msg.Data)
 }
+
+// func (client Subscriber) MoveWindow(callback func(windows.MoveEvent) bool) (*nats.Subscription, error) {
+// 	return client.nc.Subscribe(windows.MoveWindow, func(msg *nats.Msg) {
+// 		result := callback(utils.DecodeAny[windows.MoveEvent](msg.Data))
+// 		msg.Respond(utils.EncodeAny(result))
+// 	})
+// }
+//
+// func (client Requester) MoveWindow(me windows.MoveEvent) bool {
+// 	msg, _ := client.nc.Request(windows.MoveWindow, utils.EncodeAny(me), client.timeout)
+// 	return utils.DecodeAny[bool](msg.Data)
+// }
+//
+// func (client Subscriber) ResizeWindow(callback func(windows.ResizeEvent) bool) (*nats.Subscription, error) {
+// 	return client.nc.Subscribe(windows.ResizeWindow, func(msg *nats.Msg) {
+// 		result := callback(utils.DecodeAny[windows.ResizeEvent](msg.Data))
+// 		msg.Respond(utils.EncodeAny(result))
+// 	})
+// }
+//
+// func (client Requester) ResizeWindow(resizeEvent windows.ResizeEvent) bool {
+// 	msg, _ := client.nc.Request(windows.ResizeWindow, utils.EncodeAny(resizeEvent), client.timeout)
+// 	return utils.DecodeAny[bool](msg.Data)
+// }
+
+// func (client Subscriber) MinimizeWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
+// 	return client.nc.Subscribe(windows.MinimizeWindow, func(msg *nats.Msg) {
+// 		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
+// 		msg.Respond(utils.EncodeAny(result))
+// 	})
+// }
+//
+// func (client Requester) MinimizeWindow(hwnd wintypes.HWND) bool {
+// 	msg, _ := client.nc.Request(windows.MinimizeWindow, utils.EncodeAny(hwnd), client.timeout)
+// 	return utils.DecodeAny[bool](msg.Data)
+// }
+//
+// func (client Subscriber) RestoreWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
+// 	return client.nc.Subscribe(windows.RestoreWindow, func(msg *nats.Msg) {
+// 		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
+// 		msg.Respond(utils.EncodeAny(result))
+// 	})
+// }
+//
+// func (client Requester) RestoreWindow(hwnd wintypes.HWND) bool {
+// 	msg, _ := client.nc.Request(windows.RestoreWindow, utils.EncodeAny(hwnd), client.timeout)
+// 	return utils.DecodeAny[bool](msg.Data)
+// }
+//
+// func (client Subscriber) MaximizeWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
+// 	return client.nc.Subscribe(windows.MaximizeWindow, func(msg *nats.Msg) {
+// 		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
+// 		msg.Respond(utils.EncodeAny(result))
+// 	})
+// }
+//
+// func (client Requester) MaximizeWindow(hwnd wintypes.HWND) bool {
+// 	msg, _ := client.nc.Request(windows.MaximizeWindow, utils.EncodeAny(hwnd), client.timeout)
+// 	return utils.DecodeAny[bool](msg.Data)
+// }
+//
+// func (client Subscriber) FocusPrevious(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
+// 	return client.nc.Subscribe(windows.FocusPrevious, func(msg *nats.Msg) {
+// 		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
+// 		msg.Respond(utils.EncodeAny(result))
+// 	})
+// }
+//
+// func (client Requester) FocusPrevious(hwnd wintypes.HWND) bool {
+// 	msg, _ := client.nc.Request(windows.FocusPrevious, utils.EncodeAny(hwnd), client.timeout)
+// 	return utils.DecodeAny[bool](msg.Data)
+// }
+//
+// func (client Subscriber) FocusNext(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
+// 	return client.nc.Subscribe(windows.FocusNext, func(msg *nats.Msg) {
+// 		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
+// 		msg.Respond(utils.EncodeAny(result))
+// 	})
+// }
+//
+// func (client Requester) FocusNext(hwnd wintypes.HWND) bool {
+// 	msg, _ := client.nc.Request(windows.FocusNext, utils.EncodeAny(hwnd), client.timeout)
+// 	return utils.DecodeAny[bool](msg.Data)
+// }
+//
