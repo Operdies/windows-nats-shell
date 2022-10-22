@@ -12,8 +12,6 @@ func main() {
 	nc := client.Default()
 	cfg := client.GetConfig[windowmanager.Config](nc.Request)
 	wm := windowmanager.Create(cfg)
-	wm.Monitor()
-	defer wm.Close()
 
 	inputHandler := inputhandler.Create(wm)
 	mouseHook, _ := mouse.InstallHook(inputHandler.OnMouseInput)

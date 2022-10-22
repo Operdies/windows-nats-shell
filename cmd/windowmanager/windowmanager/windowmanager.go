@@ -8,9 +8,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/operdies/windows-nats-shell/pkg/input"
-	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
-	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/utils/query"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/screen"
@@ -132,33 +130,6 @@ func Create(cfg Config) *WindowManager {
 	return &man
 }
 
-func (wm *WindowManager) Monitor() {
-	nc := client.Default()
-	sub, err := nc.Subscribe.WH_SHELL(func(sei shell.ShellEventInfo) {
-		// Newly created windows should be inserted without changing focus
-		if sei.ShellCode == shell.HSHELL_WINDOWCREATED {
-			if IsIgnored(wintypes.HWND(sei.WParam)) {
-				return
-			}
-			// wia.HideBorder(wintypes.HWND(sei.WParam))
-			// wm.calculateLayout(wintypes.HWND(sei.WParam), false)
-		} else if sei.ShellCode == shell.HSHELL_WINDOWDESTROYED {
-			// current := winapi.GetForegroundWindow()
-			// wm.calculateLayout(current)
-		}
-	})
-	if err != nil {
-		panic(err)
-	}
-	wm.subs = append(wm.subs, sub)
-}
-
-func (wm *WindowManager) Close() {
-	for _, s := range wm.subs {
-		s.Unsubscribe()
-	}
-}
-
 func (wm *WindowManager) cancelAndCreateContext() context.Context {
 	wm.cancelContextLock.Lock()
 	defer wm.cancelContextLock.Unlock()
@@ -199,7 +170,7 @@ func (wm *WindowManager) cycleWindows(reverse bool) {
 			wm.windowList = append(wm.windowList[len(wm.windowList)-1:], wm.windowList[:len(wm.windowList)-1]...)
 		}
 	}
-	go wm.calculateLayout(wm.windowList, ctx)
+	go wm.calculateLayout(ctx)
 	reallyFocus(wm.windowList[0], 50, ctx)
 }
 
@@ -259,7 +230,8 @@ func (wm *WindowManager) setPerimeterWindows(otherWindows []wintypes.HWND, scree
 	}
 }
 
-func (wm *WindowManager) updateWindowList() {
+func (wm *WindowManager) updateWindowList() int {
+	k := 0
 	windows := wia.GetVisibleWindows()
 
 	handles := query.Select(windows, func(w wintypes.Window) wintypes.HWND { return w.Handle })
@@ -268,17 +240,15 @@ func (wm *WindowManager) updateWindowList() {
 	// Add any missing windows to the list
 	for _, h := range handles {
 		if query.Contains(wm.windowList, h) == false {
-			fmt.Printf("added missing: %v\n", h)
 			wm.windowList = append(wm.windowList, h)
+			k += 1
 		}
 	}
-	// Remove any superfluous windows from the list
-	for i, w := range wm.windowList {
-		if query.Contains(handles, w) == false {
-			fmt.Printf("evicting: %v\n", w)
-			wm.windowList = append(wm.windowList[:i], wm.windowList[i+1:]...)
-		}
-	}
+	// Remove any element not contained in `handles`
+	wm.windowList = query.Filter(wm.windowList, func(h wintypes.HWND) bool {
+		return query.Contains(handles, h)
+	})
+	return k
 }
 
 func (wm *WindowManager) fixZOrder() {
@@ -289,23 +259,36 @@ func (wm *WindowManager) fixZOrder() {
 		wia.SetZOrder(prev, this)
 	}
 }
-func (wm *WindowManager) calculateLayout(windowList []wintypes.HWND, ctx context.Context) {
+
+func (wm *WindowManager) refresh() {
+	wm.windowListLock.Lock()
+	defer wm.windowListLock.Unlock()
+	ctx := wm.cancelAndCreateContext()
+	wm.updateWindowList()
+	wm.fixZOrder()
+	wm.calculateLayout(ctx)
+}
+
+func (wm *WindowManager) calculateLayout(ctx context.Context) {
 	wm.fixZOrder()
 	screenRect := screen.GetScreenRect()
 
-	middleWindows, perimeterWindows := split(windowList, wm.Config.Barrels)
+	middleWindows, perimeterWindows := split(wm.windowList, wm.Config.Barrels)
 
 	go wm.setPerimeterWindows(perimeterWindows, screenRect, ctx)
 
-	// cnt := len(middleWindows)
 	mainArea := screenRect.ScaleX(wm.Config.ScaleX).ScaleY(wm.Config.ScaleY)
+	fmt.Printf("screenRect: %v\n", screenRect)
+	fmt.Printf("mainArea: %v\n", mainArea)
 
 	p := int32(wm.Config.Padding)
 	scale := 1.0 / float64(len(middleWindows))
-	step := int(mainArea.Width()) / (len(middleWindows))
+	step := float64(mainArea.Width()) / float64(len(middleWindows))
 	for i, m := range middleWindows {
 		current := winapi.GetWindowRect(m)
-		clientArea := mainArea.ScaleX(scale).Align(mainArea, windows.TopLeft).Pad(p, p).Translate(step*i, 0)
+		offset := int(float64(i) * step)
+		clientArea := mainArea.ScaleX(scale).Align(mainArea, windows.Left).Pad(p, p).Translate(offset, 0)
+		fmt.Printf("clientArea: %v\n", clientArea)
 		go wia.AnimateRectWithContext(m, current.Animate(clientArea, wm.Config.AnimationFrames, true), ctx)
 	}
 }

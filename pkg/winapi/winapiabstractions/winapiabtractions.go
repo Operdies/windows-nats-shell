@@ -119,6 +119,9 @@ func AnimateRectWithContext(hwnd wintypes.HWND, steps []windows2.Rect, ctx conte
 	start := time.Now()
 	timeLeft := deadline.Sub(start)
 	each := timeLeft / time.Duration(len(steps))
+	if each < 0 {
+		each = time.Millisecond
+	}
 	ticker := time.NewTicker(each)
 
 	timeDependentFrame := func() windows2.Rect {
