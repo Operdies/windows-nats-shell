@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
+	windows2 "github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/internal/winapicgo"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
@@ -78,7 +79,7 @@ func SetWindowPos(hwnd wintypes.HWND, hwndInsertAfter wintypes.HWND, X, Y, cx, c
 	return nil
 }
 
-func GetWindowRect(hwnd wintypes.HWND) (rect wintypes.RECT) {
+func GetWindowRect(hwnd wintypes.HWND) (rect windows2.Rect) {
 	getWindowRect.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&rect)))
 	return rect
 }
@@ -99,7 +100,7 @@ func GetParent(hwnd wintypes.HWND) wintypes.HWND {
 	return wintypes.HWND(r)
 }
 
-func WindowFromPoint(point wintypes.POINT) wintypes.HWND {
+func WindowFromPoint(point windows2.Point) wintypes.HWND {
 	return winapicgo.WindowFromPoint(point)
 }
 

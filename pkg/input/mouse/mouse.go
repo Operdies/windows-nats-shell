@@ -6,12 +6,13 @@ import (
 	"unsafe"
 
 	"github.com/operdies/windows-nats-shell/pkg/input"
+	"github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
 type _MSLLHOOKSTRUCT struct {
-	pt          wintypes.POINT
+	pt          windows.Point
 	mouseData   wintypes.DWORD
 	flags       wintypes.DWORD
 	time        wintypes.DWORD
@@ -34,7 +35,7 @@ type MouseEventInfo struct {
 	// The mouse action being triggered
 	Action MouseAction
 	// The point in per-monitor aware screen coordinates the action was triggered
-	Point wintypes.POINT
+	Point windows.Point
 	// A positive value indicates that the wheel was rotated forward, away from the user; a negative value indicates that the wheel was rotated backward, toward the user. One wheel click is defined as WHEEL_DELTA, which is 120.
 	WheelDelta int16
 	// The time stamp for this message.

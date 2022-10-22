@@ -63,6 +63,10 @@ Investigate what integrations exist / are possible
 
 Would make the shell usable without a linux driver. The shortcut manager needs to support input/output. Then the rofi implementation can respond using nats
 
+## System Tray
+
+I don't really like trays but I guess I need them. Place them on background?
+
 ## Bugs 
 
 * Processes created with `driver`'s `System.LaunchProgram` will run as admin if `driver` is running as admin.

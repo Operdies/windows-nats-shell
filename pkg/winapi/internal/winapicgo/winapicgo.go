@@ -10,10 +10,11 @@ import "C"
 import (
 	"unsafe"
 
+	"github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
 )
 
-func WindowFromPoint(point wintypes.POINT) wintypes.HWND {
+func WindowFromPoint(point windows.Point) wintypes.HWND {
 	// r, _, _ := windowFromPoint.Call(uintptr(point.X), uintptr(point.Y))
 	var pt C.POINT
 	pt.x = C.long(point.X)

@@ -6,7 +6,7 @@ import (
 	"time"
 	"unsafe"
 
-	// natswindows "github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
+	windows2 "github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
 	"github.com/operdies/windows-nats-shell/pkg/winapi/internal/winapicgo"
 	"github.com/operdies/windows-nats-shell/pkg/wintypes"
@@ -89,7 +89,7 @@ func SetBottomMost(hwnd unsafe.Pointer) {
 	winapicgo.SetBottomMost(hwnd)
 }
 
-func MoveWindow(hwnd wintypes.HWND, to wintypes.POINT) {
+func MoveWindow(hwnd wintypes.HWND, to windows2.Point) {
 	winapi.SetWindowPos(hwnd, 0, int(to.X), int(to.Y), 0, 0, wintypes.SWP_NOACTIVATE|wintypes.SWP_NOOWNERZORDER|wintypes.SWP_NOSIZE)
 }
 
@@ -97,7 +97,7 @@ func ResizeWindow(hwnd wintypes.HWND, cx, cy int) {
 	winapi.SetWindowPos(hwnd, 0, 0, 0, cx, cy, wintypes.SWP_NOACTIVATE|wintypes.SWP_NOOWNERZORDER|wintypes.SWP_NOMOVE)
 }
 
-func SetWindowRect(hwnd wintypes.HWND, target wintypes.RECT, resize bool) {
+func SetWindowRect(hwnd wintypes.HWND, target windows2.Rect, resize bool) {
 	styles := wintypes.SWP_NOACTIVATE
 	styles |= wintypes.SWP_NOOWNERZORDER | wintypes.SWP_NOZORDER
 	if !resize {
@@ -109,14 +109,19 @@ func SetWindowRect(hwnd wintypes.HWND, target wintypes.RECT, resize bool) {
 	winapi.SetWindowPos(hwnd, 0, int(target.Left), int(target.Top), int(target.Width()), int(target.Height()), uint(styles))
 }
 
-func AnimateRectWithContext(hwnd wintypes.HWND, steps []wintypes.RECT, ctx context.Context) {
+func SetZOrder(before, after wintypes.HWND) {
+	styles := wintypes.SWP_NOACTIVATE | wintypes.SWP_NOSIZE | wintypes.SWP_NOMOVE
+	winapi.SetWindowPos(after, before, 0, 0, 0, 0, styles)
+}
+
+func AnimateRectWithContext(hwnd wintypes.HWND, steps []windows2.Rect, ctx context.Context) {
 	deadline, _ := ctx.Deadline()
 	start := time.Now()
 	timeLeft := deadline.Sub(start)
 	each := timeLeft / time.Duration(len(steps))
 	ticker := time.NewTicker(each)
 
-	timeDependentFrame := func() wintypes.RECT {
+	timeDependentFrame := func() windows2.Rect {
 		elapsed := time.Now().Sub(start)
 		idx := elapsed / each
 		if int(idx) >= len(steps) {

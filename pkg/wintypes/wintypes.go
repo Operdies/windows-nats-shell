@@ -1,8 +1,9 @@
 package wintypes
 
 import (
-	"math"
 	"unsafe"
+
+	"github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
 )
 
 // SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, SPIF_+UPDATEINIFILE)
@@ -210,7 +211,7 @@ type MSG struct {
 	WParam   WPARAM
 	LParam   LPARAM
 	Time     DWORD
-	Pt       POINT
+	Pt       windows.Point
 	LPrivate DWORD
 }
 
@@ -219,137 +220,6 @@ type Window struct {
 	Handle    HWND
 	IsFocused bool
 	ZOrder    int
-}
-
-type RECT struct {
-	Left   int32
-	Top    int32
-	Right  int32
-	Bottom int32
-}
-
-func (r RECT) Transform(x, y int32) RECT {
-	return RECT{
-		Left:   r.Left + x,
-		Right:  r.Right + x,
-		Top:    r.Top + y,
-		Bottom: r.Bottom + y,
-	}
-}
-
-func (r RECT) Width() int32 {
-	return r.Right - r.Left
-}
-
-func (r RECT) Height() int32 {
-	return r.Bottom - r.Top
-}
-
-func (r RECT) CenterAround(other POINT) RECT {
-	rect := RECT{
-		Left:   int32(other.X),
-		Right:  int32(other.X),
-		Top:    int32(other.Y),
-		Bottom: int32(other.Y),
-	}
-	return r.CenterIn(rect)
-}
-
-func animate(start, end float64, steps int) []float64 {
-	ret := make([]float64, 0, steps)
-	step := (end - start) / float64(steps)
-	for i := 0; i < steps; i++ {
-		ret = append(ret, start+(step*float64(i+1)))
-	}
-	return ret
-}
-
-// Animate rect `r` towards rect `to` with `frames` frames
-func (r RECT) Animate(final RECT, frames int, animateSize bool) []RECT {
-	to := final
-	if !animateSize {
-		to = r.CenterIn(to)
-	}
-	lefts := animate(float64(r.Left), float64(to.Left), frames)
-	rights := animate(float64(r.Right), float64(to.Right), frames)
-	tops := animate(float64(r.Top), float64(to.Top), frames)
-	bottoms := animate(float64(r.Bottom), float64(to.Bottom), frames)
-	result := make([]RECT, 0, frames)
-	for i := 0; i < frames; i++ {
-		result = append(result, RECT{
-			Left:   int32(lefts[i]),
-			Right:  int32(rights[i]),
-			Top:    int32(tops[i]),
-			Bottom: int32(bottoms[i]),
-		})
-	}
-	result[len(result)-1] = final
-	return result
-}
-
-// Given a number between 0 and 1, get a corresponding point
-// on the rectangle perimeter such that 0 and 1 is the center of the top line,
-// 0 and 1 is the center of the top line
-// 0.125 is the top right corner
-// 0.375 is the bottom right corner
-// 0.625 is the bottom left corner
-// 0.875 is the top left corner
-func (r RECT) GetPointOnPerimeter(point float64) POINT {
-	// put point in the range 0 <= point < 1
-	point = point - math.Floor(point)
-	rad := point * math.Pi * 2
-	sin := math.Sin(rad)
-	cos := math.Cos(rad)
-
-	// Extrapolate the point on the circle onto the closest side of the surrounding square
-	factor := 1.0 / math.Max(math.Abs(cos), math.Abs(sin))
-	cos *= factor
-	sin *= factor
-
-	return POINT{
-		X: LONG(r.Left) + (LONG(r.Width()/2) + LONG(math.Round(sin*float64(r.Width()/2)))),
-		Y: LONG(r.Top) + (LONG(r.Height()/2) - LONG(math.Round(cos*float64(r.Height()/2)))),
-	}
-}
-
-func (r RECT) CenterIn(other RECT) RECT {
-	otherHalfWidth := other.Width() / 2
-	rHalfWidth := r.Width() / 2
-	otherHalfHeight := other.Height() / 2
-	rHalfHeight := r.Height() / 2
-	return RECT{
-		Left:   other.Left + (otherHalfWidth - rHalfWidth),
-		Right:  other.Left + (otherHalfWidth + rHalfWidth),
-		Top:    other.Top + (otherHalfHeight - rHalfHeight),
-		Bottom: other.Top + (otherHalfHeight + rHalfHeight),
-	}
-}
-
-func (r RECT) Scale(factor float64) RECT {
-	centered := r.CenterIn(RECT{0, 0, 0, 0})
-	centered.Left = int32(factor * float64(centered.Left))
-	centered.Right = int32(factor * float64(centered.Right))
-	centered.Top = int32(factor * float64(centered.Top))
-	centered.Bottom = int32(factor * float64(centered.Bottom))
-	return centered.CenterIn(r)
-}
-
-type POINT struct {
-	X, Y LONG
-}
-
-func (p1 POINT) DistanceTo(p2 POINT) float64 {
-	x1 := float64(p1.X)
-	x2 := float64(p2.X)
-	y1 := float64(p1.Y)
-	y2 := float64(p2.Y)
-	return math.Sqrt(math.Pow(x1-x2, 2) + math.Pow(y1-y2, 2))
-}
-func (p POINT) Add(p2 POINT) POINT {
-	return POINT{X: p.X + p2.X, Y: p.Y + p2.Y}
-}
-func (p POINT) Sub(p2 POINT) POINT {
-	return POINT{X: p.X - p2.X, Y: p.Y - p2.Y}
 }
 
 type GW_CMD = uint

@@ -1,4 +1,4 @@
-package wintypes
+package windows
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 
 func TestRect(t *testing.T) {
 	{
-		r := RECT{100, 100, 300, 200}
+		r := Rect{100, 100, 300, 200}
 		r2 := r.Scale(1.5)
 
 		if r.Height() != 100 {
@@ -29,14 +29,14 @@ func TestRect(t *testing.T) {
 	}
 
 	{
-		r := RECT{0, 0, 10, 10}
-		r2 := r.CenterAround(POINT{5, 5})
+		r := Rect{0, 0, 10, 10}
+		r2 := r.CenterAround(Point{5, 5})
 
 		if r.Left != r2.Left || r.Right != r2.Right || r.Bottom != r2.Bottom || r.Top != r2.Top {
 			t.Errorf("Centering failed")
 		}
 
-		r = r.CenterAround(POINT{0, 0})
+		r = r.CenterAround(Point{0, 0})
 		if r.Left != -5 || r.Right != 5 || r.Top != -5 || r.Bottom != 5 {
 			t.Error("Centering failed!")
 		}
@@ -44,8 +44,8 @@ func TestRect(t *testing.T) {
 }
 
 func TestRectPerimeter(t *testing.T) {
-	r := RECT{100, 100, 200, 200}
-	expected := map[float64]POINT{
+	r := Rect{100, 100, 200, 200}
+	expected := map[float64]Point{
 		0:     {150, 100},
 		0.125: {200, 100},
 		0.25:  {200, 150},
@@ -57,7 +57,7 @@ func TestRectPerimeter(t *testing.T) {
 		1.0:   {150, 100},
 	}
 	for f, p := range expected {
-		actual := r.GetPointOnPerimeter(f)
+		actual := r.GetPointOnPerimeterCircleMethod(f)
 		if actual.X != p.X || actual.Y != p.Y {
 			t.Errorf("Got: %v, expected: %v", actual, p)
 		}

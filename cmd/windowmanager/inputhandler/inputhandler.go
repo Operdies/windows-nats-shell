@@ -29,11 +29,11 @@ type eventInfo struct {
 	// are we currently resizing
 	resizing bool
 	// The resizing handle
-	resizeDirection windows.WindowCardinals
+	resizeDirection windows.CardinalDirection
 	// The window handle
 	handle wintypes.HWND
 	// The initial configuration of the window
-	startPosition wintypes.RECT
+	startPosition windows.Rect
 }
 
 func Create(wm *windowmanager.WindowManager) *InputHandler {
@@ -60,7 +60,11 @@ func (h *InputHandler) OnKeyboardInput(kei keyboard.KeyboardEventInfo) bool {
 	}
 
 	if keyDown && vkey == h.wm.Config.CycleVKey && h.actionKeyDown() {
-		h.wm.FocusPrevWindow(0)
+		if h.isKeyDown(input.VK_LSHIFT) {
+			h.wm.FocusPrevWindow()
+		} else {
+			h.wm.FocusNextWindow()
+		}
 		return true
 	}
 
@@ -109,7 +113,7 @@ func (h *InputHandler) resizeStart(mei mouse.MouseEventInfo) {
 		startPosition:   rect,
 	}
 }
-func applyResize(h *InputHandler, p wintypes.POINT) {
+func applyResize(h *InputHandler, p windows.Point) {
 	delta := h.eventInfo.trigger.Point.Sub(p)
 	d := h.eventInfo.resizeDirection
 	r := h.eventInfo.startPosition
@@ -153,13 +157,13 @@ func (h *InputHandler) dragStart(mei mouse.MouseEventInfo) {
 	}
 }
 
-func applyMove(h *InputHandler, p wintypes.POINT) {
+func applyMove(h *InputHandler, p windows.Point) {
 	// delta := h.resizeEventInfo.trigger.Point.Sub(p)
 	// r := h.resizeEventInfo.startPosition.Transform(-int32(delta.X), -int32(delta.Y))
 	// winapiabstractions.SetWindowRect(h.resizeEventInfo.handle, r)
 
 	delta := h.eventInfo.trigger.Point.Sub(p)
-	startPoint := wintypes.POINT{X: wintypes.LONG(h.eventInfo.startPosition.Left), Y: wintypes.LONG(h.eventInfo.startPosition.Top)}
+	startPoint := windows.Point{X: int32(h.eventInfo.startPosition.Left), Y: int32(h.eventInfo.startPosition.Top)}
 	target := startPoint.Sub(delta)
 	winapi.SuperFocusStealer(h.eventInfo.handle)
 	wia.MoveWindow(h.eventInfo.handle, target)
@@ -217,11 +221,10 @@ func (h *InputHandler) OnMouseInput(mei mouse.MouseEventInfo) bool {
 		}
 	case mouse.VMOUSEWHEEL:
 		if h.actionKeyDown() {
-			hwnd := winapi.GetForegroundWindow()
 			if mei.WheelDelta > 0 {
-				go h.wm.FocusPrevWindow(hwnd)
+				go h.wm.FocusNextWindow()
 			} else {
-				go h.wm.FocusNextWindow(hwnd)
+				go h.wm.FocusPrevWindow()
 			}
 			return true
 		}

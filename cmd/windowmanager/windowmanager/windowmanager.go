@@ -3,13 +3,13 @@ package windowmanager
 import (
 	"context"
 	"fmt"
-	"sort"
 	"sync"
 	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/operdies/windows-nats-shell/pkg/input"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
+	"github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	"github.com/operdies/windows-nats-shell/pkg/utils/query"
 	"github.com/operdies/windows-nats-shell/pkg/winapi"
@@ -54,14 +54,18 @@ type Config struct {
 	CycleVKey  input.VKEY
 	ActionKey  string
 	ActionVKey input.VKEY
-	// The scale of focused windows
-	Ratio float64
+	ScaleY     float64
+	ScaleX     float64
 	// The scale of non-focused windows
 	SmallScale float64
 	// The location of the screen 'perimeter'
 	Perimeter       float64
 	AnimationFrames int
 	AnimationTime   int
+	// The number of windows that will be in the center
+	Barrels int
+	// The spacing between centered windows
+	Padding int
 }
 
 type WindowManager struct {
@@ -69,6 +73,8 @@ type WindowManager struct {
 	subs               []*nats.Subscription
 	cancelLayoutChange context.CancelFunc
 	cancelContextLock  sync.Mutex
+	windowList         []wintypes.HWND
+	windowListLock     sync.Mutex
 }
 
 func Create(cfg Config) *WindowManager {
@@ -79,13 +85,20 @@ func Create(cfg Config) *WindowManager {
 		panic(fmt.Errorf("Unknown layout %v.", cfg.Layout))
 	}
 
-	if cfg.Ratio > 1 || cfg.Ratio < 0 {
-		panic("Ratio must be a number between 0 and 1")
+	if cfg.ScaleX > 1 || cfg.ScaleX < 0 {
+		panic("ScaleX must be a number between 0 and 1")
+	}
+	if cfg.ScaleY > 1 || cfg.ScaleY < 0 {
+		panic("ScaleY must be a number between 0 and 1")
 	}
 
-	if cfg.Ratio == 0 {
-		cfg.Ratio = 0.8
+	if cfg.ScaleX == 0 {
+		cfg.ScaleX = 0.8
 	}
+	if cfg.ScaleY == 0 {
+		cfg.ScaleY = 0.8
+	}
+
 	if cfg.SmallScale == 0 {
 		cfg.SmallScale = 1.0
 	}
@@ -97,6 +110,12 @@ func Create(cfg Config) *WindowManager {
 	}
 	if cfg.AnimationTime == 0 {
 		cfg.AnimationTime = 200
+	}
+	if cfg.Barrels == 0 {
+		cfg.Barrels = 1
+	}
+	if cfg.Barrels < 1 {
+		panic("There must be at least one barrel")
 	}
 
 	ck := input.VK_MAP[cfg.CycleKey]
@@ -140,26 +159,6 @@ func (wm *WindowManager) Close() {
 	}
 }
 
-func partition(around wintypes.HWND) []wintypes.HWND {
-	windows := wia.GetVisibleWindows()
-	handles := query.Select(windows, func(w wintypes.Window) wintypes.HWND { return w.Handle })
-	handles = query.Filter(handles, func(hwnd wintypes.HWND) bool { return !IsIgnored(hwnd) && !wia.WindowMinimized(hwnd) })
-	// Ensure the handles are always ordered the same way
-	sort.Slice(handles, func(i, j int) bool {
-		return handles[i] < handles[j]
-	})
-
-	// Remove 'siblingOf' from the list, and rearrange the list
-	for i, w := range handles {
-		if w == around {
-			handles = append(handles[i+1:], handles[:i]...)
-			break
-		}
-	}
-
-	return handles
-}
-
 func (wm *WindowManager) cancelAndCreateContext() context.Context {
 	wm.cancelContextLock.Lock()
 	defer wm.cancelContextLock.Unlock()
@@ -172,94 +171,152 @@ func (wm *WindowManager) cancelAndCreateContext() context.Context {
 	return ctx
 }
 
-func (wm *WindowManager) selectSibling(siblingOf wintypes.HWND, reverse bool) {
-	ctx := wm.cancelAndCreateContext()
+func reallyFocus(h wintypes.HWND, tries int, ctx context.Context) {
 	done := false
 	go func() {
 		<-ctx.Done()
 		done = true
 	}()
-
-	for i := 0; i < 50; i++ {
-		if done {
+	for i := 0; i < tries && !done; i++ {
+		if winapi.SuperFocusStealer(h) {
 			return
 		}
-		subject := siblingOf
-		if subject == 0 {
-			subject = winapi.GetForegroundWindow()
-		}
-		if IsIgnored(subject) {
-			return
-		}
-
-		handles := partition(subject)
-		// Reverse the array to cycle backwards instead of forwards
-		if reverse {
-			for i, j := 0, len(handles)-1; i < j; i, j = i+1, j-1 {
-				handles[i], handles[j] = handles[j], handles[i]
-			}
-		}
-
-		if len(handles) == 0 {
-			go wm.calculateLayout(subject, ctx)
-			return
-		}
-
-		next := handles[0]
-		if winapi.SuperFocusStealer(next) {
-			go wm.calculateLayout(next, ctx)
-			return
-		}
-		// If the operation failed, wait a bit and try again
 		time.Sleep(time.Millisecond)
 	}
 }
+func (wm *WindowManager) cycleWindows(reverse bool) {
+	wm.windowListLock.Lock()
+	defer wm.windowListLock.Unlock()
+	wm.updateWindowList()
+	ctx := wm.cancelAndCreateContext()
 
-func (wm *WindowManager) calculateLayout(mainWindow wintypes.HWND, ctx context.Context) {
-	if IsIgnored(mainWindow) {
+	if len(wm.windowList) > 1 {
+		if reverse {
+			// Shift the list and put the first element last
+			wm.windowList = append(wm.windowList[1:], wm.windowList[0:1]...)
+		} else {
+			// Shift the list and put the last element first
+			wm.windowList = append(wm.windowList[len(wm.windowList)-1:], wm.windowList[:len(wm.windowList)-1]...)
+		}
+	}
+	go wm.calculateLayout(wm.windowList, ctx)
+	reallyFocus(wm.windowList[0], 50, ctx)
+}
+
+func (wm *WindowManager) swapWindows(a, b wintypes.HWND) {
+	if a == 0 || b == 0 {
+		return
+	}
+	if a == b {
 		return
 	}
 
-	screenRect := screen.GetScreenRect()
+	wm.windowListLock.Lock()
+	defer wm.windowListLock.Unlock()
+	wm.updateWindowList()
 
-	currentMainRect := winapi.GetWindowRect(mainWindow)
-	newMainRect := screenRect.Scale(wm.Config.Ratio)
-	go wia.AnimateRectWithContext(mainWindow, currentMainRect.Animate(newMainRect, wm.Config.AnimationFrames, false), ctx)
+	var aIdx, bIdx int
+	for i, w := range wm.windowList {
+		if w == a {
+			aIdx = i
+		}
+		if w == b {
+			bIdx = i
+		}
+	}
 
-	otherWindows := partition(mainWindow)
-	cnt := len(otherWindows)
-	// Place windows on the perimeter at 0.85% of the screen size instead of the actual perimeter
+	ctx := wm.cancelAndCreateContext()
+	go reallyFocus(a, 50, ctx)
+	wm.windowList[aIdx], wm.windowList[bIdx] = wm.windowList[bIdx], wm.windowList[aIdx]
+	r1 := winapi.GetWindowRect(a)
+	r2 := winapi.GetWindowRect(b)
+	go wia.AnimateRectWithContext(a, r1.Animate(r2, wm.Config.AnimationFrames, true), ctx)
+	go wia.AnimateRectWithContext(b, r2.Animate(r1, wm.Config.AnimationFrames, true), ctx)
+	wm.fixZOrder()
+}
+
+func split[T any](lst []T, index int) (fst, second []T) {
+	if index < 0 {
+		return make([]T, 0), lst
+	}
+	if len(lst) <= index {
+		return lst, make([]T, 0)
+	}
+	return lst[:index], lst[index:]
+}
+
+func (wm *WindowManager) setPerimeterWindows(otherWindows []wintypes.HWND, screenRect windows.Rect, ctx context.Context) {
 	perimeter := screenRect.Scale(wm.Config.Perimeter)
-
+	cnt := len(otherWindows)
 	for i, w := range otherWindows {
 		// The position of this window on the perimeter of the monitor
 		position := float64(i) / float64(cnt)
-		point := perimeter.GetPointOnPerimeter(position)
+		point := perimeter.GetPointOnPerimeterCircleMethod(position)
 		currentWindowRect := winapi.GetWindowRect(w)
-		newWindowRect := newMainRect.CenterAround(point).Scale(wm.Config.SmallScale)
-		anim := currentWindowRect.Animate(newWindowRect, wm.Config.AnimationFrames, false)
+		newWindowRect := screenRect.CenterAround(point).Scale(wm.Config.SmallScale)
+		anim := currentWindowRect.Animate(newWindowRect, wm.Config.AnimationFrames, true)
 		go wia.AnimateRectWithContext(w, anim, ctx)
 	}
 }
 
-func (wm *WindowManager) FocusPrevWindow(hwnd wintypes.HWND) {
-	wm.selectSibling(hwnd, true)
+func (wm *WindowManager) updateWindowList() {
+	windows := wia.GetVisibleWindows()
+
+	handles := query.Select(windows, func(w wintypes.Window) wintypes.HWND { return w.Handle })
+	handles = query.Filter(handles, func(hwnd wintypes.HWND) bool { return !IsIgnored(hwnd) && !wia.WindowMinimized(hwnd) })
+
+	// Add any missing windows to the list
+	for _, h := range handles {
+		if query.Contains(wm.windowList, h) == false {
+			fmt.Printf("added missing: %v\n", h)
+			wm.windowList = append(wm.windowList, h)
+		}
+	}
+	// Remove any superfluous windows from the list
+	for i, w := range wm.windowList {
+		if query.Contains(handles, w) == false {
+			fmt.Printf("evicting: %v\n", w)
+			wm.windowList = append(wm.windowList[:i], wm.windowList[i+1:]...)
+		}
+	}
 }
-func (wm *WindowManager) FocusNextWindow(hwnd wintypes.HWND) {
-	wm.selectSibling(hwnd, false)
+
+func (wm *WindowManager) fixZOrder() {
+	windowList := wm.windowList
+	for i := 1; i < len(windowList); i++ {
+		prev := windowList[i-1]
+		this := windowList[i]
+		wia.SetZOrder(prev, this)
+	}
+}
+func (wm *WindowManager) calculateLayout(windowList []wintypes.HWND, ctx context.Context) {
+	wm.fixZOrder()
+	screenRect := screen.GetScreenRect()
+
+	middleWindows, perimeterWindows := split(windowList, wm.Config.Barrels)
+
+	go wm.setPerimeterWindows(perimeterWindows, screenRect, ctx)
+
+	// cnt := len(middleWindows)
+	mainArea := screenRect.ScaleX(wm.Config.ScaleX).ScaleY(wm.Config.ScaleY)
+
+	p := int32(wm.Config.Padding)
+	scale := 1.0 / float64(len(middleWindows))
+	step := int(mainArea.Width()) / (len(middleWindows))
+	for i, m := range middleWindows {
+		current := winapi.GetWindowRect(m)
+		clientArea := mainArea.ScaleX(scale).Align(mainArea, windows.TopLeft).Pad(p, p).Translate(step*i, 0)
+		go wia.AnimateRectWithContext(m, current.Animate(clientArea, wm.Config.AnimationFrames, true), ctx)
+	}
+}
+
+func (wm *WindowManager) FocusPrevWindow() {
+	wm.cycleWindows(true)
+}
+func (wm *WindowManager) FocusNextWindow() {
+	wm.cycleWindows(false)
 }
 func (wm *WindowManager) FocusThisWindow(next wintypes.HWND) {
-	ctx := wm.cancelAndCreateContext()
-	done := false
-	go func() {
-		<-ctx.Done()
-		done = true
-	}()
-	for !done {
-		if winapi.SuperFocusStealer(next) {
-			go wm.calculateLayout(next, ctx)
-			return
-		}
-		time.Sleep(time.Millisecond)
-	}
+	current := winapi.GetForegroundWindow()
+	wm.swapWindows(next, current)
 }

@@ -8,7 +8,7 @@ services:
       frag: ../cmd/background/shader.frag
     render:
       updaterate: 2000 # Update rate in milliseconds
-      clearcolor: 423
+      clearcolor: f423
   events:
     executable: ./events.exe
     keyboardevents: false
@@ -55,11 +55,6 @@ services:
           - nats:
               subject: System.LaunchProgramAsAdmin
               payload: pwsh.exe
-      - keys: nullkey+tab 
-        actions: 
-          - nats:
-              subject: System.LaunchProgram
-              payload: pwsh.exe
       - keys: pause 
         actions: 
           - nats:
@@ -69,8 +64,11 @@ services:
     layout: revolver
     actionkey: nullkey
     cyclekey: alt
-    ratio: 0.80
-    smallscale: 1.0
-    perimeter: 0.6
+    scalex: 0.9
+    scaley: 0.90
+    padding: 20
+    smallscale: 0.5
+    perimeter: 0.5
     animationframes: 100
     animationtime: 300
+    barrels: 2

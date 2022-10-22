@@ -6,7 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/screen"
-	"github.com/operdies/windows-nats-shell/pkg/wintypes"
+	"github.com/operdies/windows-nats-shell/pkg/nats/api/windows"
 )
 
 const (
@@ -83,9 +83,9 @@ func GetResolution() screen.Resolution {
 	return screen.Resolution{Width: devMode.DmPelsWidth, Height: devMode.DmPelsHeight}
 }
 
-func GetScreenRect() wintypes.RECT {
+func GetScreenRect() windows.Rect {
 	res := GetResolution()
-	return wintypes.RECT{Top: 0, Left: 0, Right: int32(res.Width), Bottom: int32(res.Height)}
+	return windows.Rect{Top: 0, Left: 0, Right: int32(res.Width), Bottom: int32(res.Height)}
 }
 
 func SetResolution(res screen.Resolution) error {
