@@ -38,9 +38,6 @@ Make an API to kill a process by its handle
 
 API for posting data (images or text) to the background. TBD: pre-configured zones or defined per request / client?
 Should this API support different segments to have different Z-orders (even drawing on top of windows?)
-* Status bar 
-Now that we have pseudo-tiling and padding, we can start working on a status bar. 
-The taskbar should probably be drawn on top of windows because the alternative would mess with Revolver
 
 ## Notification system 
 
@@ -54,11 +51,18 @@ Cycle between revolver strategy, tall mode, and monocle mode -- revolver with ma
 
 * add toggle for auto-layout
 * Highlight border of focused window 
-** glfw 3.4 adds click-through windows, but it might not be released for a while, and is not available in go-glfw
+* glfw 3.4 adds click-through windows, but it might not be released for a while, and is not available in go-glfw
+* add something analogous to hiding and restoring windows 
+- Currently, hidden windows must be restored by alt-tabbing, which means alt-tab cannot be overridden.
 
 * Make abstractions more sane -- inputhandler duplicates hotkey functionality
+the hotkey manager should be easier to use. It's not really tennable to require a nats endpoint 
+in order to add a shortcut for something. Investigate what can be done with reflection.
+-- Shortcuts is inherently something that is running locally on the machine which the keyboard is connected to. 
 * a lot of `cmd/*` code is generic and could be moved to a suitable package
 
+## Windows app launcher 
+* Make Rofi but for windows already. Generic pickers is a huge no-brainer.
 
 ## Steam integration
 
@@ -69,11 +73,26 @@ Investigate what integrations exist / are possible
 
 Would make the shell usable without a linux driver. The shortcut manager needs to support input/output. Then the rofi implementation can respond using nats
 
+## Status bar 
+Now that we have pseudo-tiling and padding, we can start working on a status bar. 
+The taskbar should probably be drawn on top of windows because the alternative would mess with Revolver
+
 ## System Tray
 
 I don't really like trays but I guess I need them. Place them on background?
 -- Tray icons may not even be possible without explorer? It seems they are very tightly integrated with 
 -- exlorer.exe Investigate if the tray icon API calls can be intercepted
+
+## Block/Allow lists 
+
+The current permissive model is probably not the safest.
+`client.Default` and `client.New` should respect the following settings:
+Add a config option to 
+1. change the nats service port 
+> if nats-server is not running on the configured port, try to start it. Otherwise panic
+2. specify whether to be permissive or restrictive. 
+> Permissive: allow any connection except if specified in block list
+> Restrictive: Disallow all connections not specified in allow list
 
 ## Bugs 
 
@@ -81,6 +100,7 @@ I don't really like trays but I guess I need them. Place them on background?
 - Consider if we need a full-blown CreateProcess implementation which mines the registry and properly controls inherited handles
 * `driver` cannot open e.g. a `.png` file after we switched to `ShellExecute`.
 - Add handlers to config?
+- This is probably better solved with the `CreateProcess` solution?
 
 ## Thought cabinet
 
