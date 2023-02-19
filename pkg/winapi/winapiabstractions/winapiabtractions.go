@@ -145,6 +145,31 @@ func AnimateRectWithContext(hwnd wintypes.HWND, steps []windows2.Rect, ctx conte
 	}
 }
 
+func MinimizeWindow(hwnd wintypes.HWND) {
+	styles := uint64(winapi.GetWindowLong(hwnd, wintypes.GWL_STYLE))
+	styles |= wintypes.WS_MINIMIZE
+	winapi.SetWindowLongA(hwnd, wintypes.GWL_STYLE, wintypes.LONG(styles))
+}
+
+func RestoreWindow(hwnd wintypes.HWND) {
+	styles := uint64(winapi.GetWindowLong(hwnd, wintypes.GWL_STYLE))
+	styles &= ^wintypes.WS_MINIMIZE
+	winapi.SetWindowLongA(hwnd, wintypes.GWL_STYLE, wintypes.LONG(styles))
+
+}
+
+func RestoreOrMinimize(h wintypes.HWND) {
+	if WindowMinimized(h) == false {
+		fmt.Printf("minimize: %v\n", h)
+		MinimizeWindow(h)
+	} else {
+		fmt.Printf("restore: %v\n", h)
+		RestoreWindow(h)
+	}
+	Redraw(h)
+
+}
+
 func WindowMinimized(hwnd wintypes.HWND) bool {
 	styles := uint64(winapi.GetWindowLong(hwnd, wintypes.GWL_STYLE))
 	return styles&wintypes.WS_MINIMIZE == wintypes.WS_MINIMIZE

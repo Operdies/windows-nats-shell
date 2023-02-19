@@ -94,6 +94,22 @@ Add a config option to
 > Permissive: allow any connection except if specified in block list
 > Restrictive: Disallow all connections not specified in allow list
 
+## New yaml parser 
+
+Motivation: windowmanager has workarounds because of this specific issue.
+
+Config files / code would be simpler if there was a generic way to 
+parse complex objects from strings. E.g. if a config member implements the 
+interface Unyamler with 
+`func (u Unyamler) FromString(str string) Unyamler`
+`func (u Unyamler) ToString() string`
+then e.g. a VKEY should be constructed with the interface calls.
+Everything else should be constructed normally.
+
+If we go with a new yaml parser, we can also make it case-insensitive.
+As a bonus, we can also do some ultra-unsafe encoding/decoding private fields.
+This could also pave the way for some fascinating IPC?
+
 ## Bugs 
 
 * Processes created with `driver`'s `System.LaunchProgram` will run as admin if `driver` is running as admin.

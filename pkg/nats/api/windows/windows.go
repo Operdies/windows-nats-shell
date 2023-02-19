@@ -23,6 +23,8 @@ const (
 	RestoreWindow = "Window.Restore"
 	// MaximizeWindow the window
 	MaximizeWindow = "Window.Maximize"
+	// Restore or minimize the window
+	RestoreOrMinimizeWindow = "Window.RestoreOrMinimize"
 	// Focus the previous window
 	FocusPrevious = "Window.FocusPrevious"
 	// Focus the next window
@@ -293,6 +295,18 @@ func (r Rect) Pad(x, y int32) Rect {
 		Top:    r.Top + y,
 		Bottom: r.Bottom - y,
 	}
+}
+
+func (r Rect) AreSimilar(o Rect) bool {
+	return r.Height() == o.Height() &&
+		r.Width() == o.Width()
+}
+
+func (r Rect) Equals(o Rect) bool {
+	return r.Left == o.Left &&
+		r.Right == o.Right &&
+		r.Top == o.Top &&
+		r.Bottom == o.Bottom
 }
 
 type Point struct {

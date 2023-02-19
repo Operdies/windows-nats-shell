@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/operdies/windows-nats-shell/cmd/background/colors"
+	"github.com/operdies/windows-nats-shell/pkg/gfx/colors"
 )
 
 func TestColorParser(t *testing.T) {

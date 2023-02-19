@@ -123,6 +123,10 @@ func ListenIndefinitely() {
 		}
 		return wia.ToggleBorder(h)
 	})
+	nc.Subscribe.RestoreOrMinimizeWindow(func(h wintypes.HWND) bool {
+		wia.RestoreOrMinimize(h)
+		return true
+	})
 	select {}
 }
 

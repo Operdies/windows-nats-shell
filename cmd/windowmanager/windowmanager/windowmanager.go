@@ -24,7 +24,7 @@ const (
 
 var (
 	actionKey    = input.VK_MAP["nullkey"]
-	ignored      = map[string]bool{"Background": true}
+	ignored      = map[string]bool{"Background": true, "Toast": true}
 	ignoredCache = map[wintypes.HWND]bool{}
 	maplock      = sync.Mutex{}
 )
@@ -160,6 +160,9 @@ func (wm *WindowManager) cycleWindows(reverse bool) {
 	defer wm.windowListLock.Unlock()
 	wm.updateWindowList()
 	ctx := wm.cancelAndCreateContext()
+	if len(wm.windowList) == 0 {
+		return
+	}
 
 	if len(wm.windowList) > 1 {
 		if reverse {
@@ -241,6 +244,7 @@ func (wm *WindowManager) updateWindowList() int {
 	for _, h := range handles {
 		if query.Contains(wm.windowList, h) == false {
 			wm.windowList = append(wm.windowList, h)
+			// wia.HideBorder(h)
 			k += 1
 		}
 	}

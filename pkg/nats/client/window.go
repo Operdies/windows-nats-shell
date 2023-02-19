@@ -113,30 +113,42 @@ func (client Requester) ToggleBorder(hwnd wintypes.HWND) bool {
 // 	return utils.DecodeAny[bool](msg.Data)
 // }
 
-// func (client Subscriber) MinimizeWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
-// 	return client.nc.Subscribe(windows.MinimizeWindow, func(msg *nats.Msg) {
-// 		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
-// 		msg.Respond(utils.EncodeAny(result))
-// 	})
-// }
-//
-// func (client Requester) MinimizeWindow(hwnd wintypes.HWND) bool {
-// 	msg, _ := client.nc.Request(windows.MinimizeWindow, utils.EncodeAny(hwnd), client.timeout)
-// 	return utils.DecodeAny[bool](msg.Data)
-// }
-//
-// func (client Subscriber) RestoreWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
-// 	return client.nc.Subscribe(windows.RestoreWindow, func(msg *nats.Msg) {
-// 		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
-// 		msg.Respond(utils.EncodeAny(result))
-// 	})
-// }
-//
-// func (client Requester) RestoreWindow(hwnd wintypes.HWND) bool {
-// 	msg, _ := client.nc.Request(windows.RestoreWindow, utils.EncodeAny(hwnd), client.timeout)
-// 	return utils.DecodeAny[bool](msg.Data)
-// }
-//
+func (client Subscriber) MinimizeWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
+	return client.nc.Subscribe(windows.MinimizeWindow, func(msg *nats.Msg) {
+		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
+		msg.Respond(utils.EncodeAny(result))
+	})
+}
+
+func (client Requester) MinimizeWindow(hwnd wintypes.HWND) bool {
+	msg, _ := client.nc.Request(windows.MinimizeWindow, utils.EncodeAny(hwnd), client.timeout)
+	return utils.DecodeAny[bool](msg.Data)
+}
+
+func (client Subscriber) RestoreWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
+	return client.nc.Subscribe(windows.RestoreWindow, func(msg *nats.Msg) {
+		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
+		msg.Respond(utils.EncodeAny(result))
+	})
+}
+
+func (client Requester) RestoreWindow(hwnd wintypes.HWND) bool {
+	msg, _ := client.nc.Request(windows.RestoreWindow, utils.EncodeAny(hwnd), client.timeout)
+	return utils.DecodeAny[bool](msg.Data)
+}
+
+func (client Subscriber) RestoreOrMinimizeWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
+	return client.nc.Subscribe(windows.RestoreOrMinimizeWindow, func(msg *nats.Msg) {
+		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))
+		msg.Respond(utils.EncodeAny(result))
+	})
+}
+
+func (client Requester) RestoreOrMinimizeWindow(hwnd wintypes.HWND) bool {
+	msg, _ := client.nc.Request(windows.RestoreOrMinimizeWindow, utils.EncodeAny(hwnd), client.timeout)
+	return utils.DecodeAny[bool](msg.Data)
+}
+
 // func (client Subscriber) MaximizeWindow(callback func(wintypes.HWND) bool) (*nats.Subscription, error) {
 // 	return client.nc.Subscribe(windows.MaximizeWindow, func(msg *nats.Msg) {
 // 		result := callback(utils.DecodeAny[wintypes.HWND](msg.Data))

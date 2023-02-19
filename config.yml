@@ -1,5 +1,9 @@
 services:
+  toast:
+    enabled: false
+    executable: ./toast.exe
   background:
+    enabled: false
     executable: ./background.exe
     background:
       path: C:/Users/alexw/Documents/wallpaper.png
@@ -45,16 +49,6 @@ services:
         actions:
           - nats:
               subject: Shell.Restart
-      - keys: ctrl+shift+p
-        actions:
-          - nats:
-              subject: System.LaunchProgram
-              payload: pwsh.exe
-      - keys: ctrl+alt+shift+p
-        actions:
-          - nats:
-              subject: System.LaunchProgramAsAdmin
-              payload: pwsh.exe
       - keys: pause 
         actions: 
           - nats:

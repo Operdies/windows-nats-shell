@@ -3,13 +3,14 @@ package main
 import (
 	"log"
 	"runtime"
+	"sync"
 	"time"
 	"unsafe"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
-	"github.com/operdies/windows-nats-shell/cmd/background/colors"
-	"github.com/operdies/windows-nats-shell/cmd/background/gfx"
+	"github.com/operdies/windows-nats-shell/pkg/gfx/colors"
+	"github.com/operdies/windows-nats-shell/pkg/gfx/shaders"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
 	"github.com/operdies/windows-nats-shell/pkg/nats/client"
 	wia "github.com/operdies/windows-nats-shell/pkg/winapi/winapiabstractions"
@@ -136,6 +137,20 @@ func main() {
 		panic(err)
 	}
 
+	shown := true
+	showLock := sync.Mutex{}
+	nc.Subscribe.ToggleBackground(func() bool {
+		showLock.Lock()
+		defer showLock.Unlock()
+		if shown {
+			window.Hide()
+		} else {
+			window.Show()
+		}
+		shown = !shown
+		return true
+	})
+
 	wia.MakeToolWindow(hwnd)
 	wia.SetBottomMost(hwnd)
 	window.SetMouseButtonCallback(func(w *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
@@ -147,12 +162,12 @@ func main() {
 		}()
 	})
 
-	vertexShader, _ := gfx.NewShaderFromFile(cfg.Shader.Vert, gl.VERTEX_SHADER)
-	fragmentShader, err := gfx.NewShaderFromFile(cfg.Shader.Frag, gl.FRAGMENT_SHADER)
+	vertexShader, _ := shaders.NewShaderFromFile(cfg.Shader.Vert, gl.VERTEX_SHADER)
+	fragmentShader, err := shaders.NewShaderFromFile(cfg.Shader.Frag, gl.FRAGMENT_SHADER)
 	if err != nil {
 		panic(err)
 	}
-	prog, err := gfx.NewProgram(vertexShader, fragmentShader)
+	prog, err := shaders.NewProgram(vertexShader, fragmentShader)
 
 	if err != nil {
 		panic(err)

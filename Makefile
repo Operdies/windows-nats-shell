@@ -1,6 +1,6 @@
 BINPATH=./bin
 
-all: events driver shell background hotkeys windowmanager
+all: events driver shell background hotkeys windowmanager toast
 
 hookdll: 
 		gcc -O3 -shared  -I./c/hook-dll  -fpic ./c/hook-dll/hook.c -o $(BINPATH)/libhook.dll
@@ -16,6 +16,9 @@ driver:
 
 shell: 
 	go build -o $(BINPATH)/shell.exe ./cmd/shell/
+
+toast: 
+	go build -o $(BINPATH)/toast.exe ./cmd/toast/ && nats pub Shell.RestartService toast
 
 background: 
 	go build -o $(BINPATH)/background.exe ./cmd/background/ && nats pub Shell.RestartService background

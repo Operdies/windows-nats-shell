@@ -132,3 +132,25 @@ func (client Subscriber) WH_KEYBOARD(callback func(keyboard.KeyboardEventInfo) b
 		msg.Respond(utils.EncodeAny(handled))
 	})
 }
+
+func (client Subscriber) ToggleBackground(callback func() bool) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.ToggleBackground, func(msg *nats.Msg) {
+		msg.Respond(utils.EncodeAny(callback()))
+	})
+}
+
+func (client Requester) ToggleBackground() bool {
+	response, _ := client.nc.Request(shell.ToggleBackground, nil, client.timeout)
+	return utils.DecodeAny[bool](response.Data)
+}
+
+func (client Subscriber) ShellToast(callback func(shell.Toast)) (*nats.Subscription, error) {
+	return client.nc.Subscribe(shell.ShellToast, func(msg *nats.Msg) {
+		toast := utils.DecodeAny[shell.Toast](msg.Data)
+		callback(toast)
+	})
+}
+
+func (client Publisher) ShellToast(toast shell.Toast) {
+	client.nc.Publish(shell.ShellToast, utils.EncodeAny(toast))
+}

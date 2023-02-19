@@ -37,14 +37,36 @@ const (
 	KeyboardEvent = "Shell.KeyboardEvent"
 	// Some mouse event happened
 	MouseEvent = "Shell.MouseEvent"
+	// Request a background toggle
+	ToggleBackground = "Shell.ToggleBackground"
+	// Send a toast
+	ShellToast = "Shell.Toast"
 )
 
 const (
 	SERVICE_ENV_KEY = "_SHELL_SERVICE_NAME_"
 )
 
+type ToastLevel = uint32
+
+const (
+	Debug ToastLevel = iota
+	Information
+	Critical
+)
+
+type Toast struct {
+	// The title of the toast
+	Title string
+	// The toast message
+	Message string
+	// How critical is the message
+	Level ToastLevel
+	// How long is the message relevant. A negative value is permanent
+	Duration int
+}
+
 type Service struct {
-	Custom map[string]interface{}
 	// The full path to the exectuable file
 	Executable string
 	Arguments  []string
@@ -58,8 +80,12 @@ type Service struct {
 }
 
 type Configuration struct {
-	Path           string // Path to the file the config was loaded from
-	Services       map[string]Service
+	// Path to the file the config was loaded from
+	Path string
+	// A typed map of named services and the configuration options known by the shell.
+	Services map[string]Service
+	// An untyped map of named services and their specific configurations. The service
+	// can request this configuration from the shell
 	ServiceConfigs map[string]any
 }
 
