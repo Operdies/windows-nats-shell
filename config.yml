@@ -1,4 +1,14 @@
 services:
+  explorer:
+    enabled: true
+    detach: true
+    admin: false
+    executable: C:/Windows/explorer.exe
+  steam:
+    enabled: true
+    detach: true
+    admin: false
+    executable: C:/Users/alexw/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Steam/Steam.lnk
   toast:
     enabled: false
     executable: ./toast.exe

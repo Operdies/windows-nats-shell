@@ -77,6 +77,8 @@ type Service struct {
 	Visible          bool
 	// Any environment variables that should be defined
 	Environment []string
+	Detach      bool
+	Admin       bool
 }
 
 type Configuration struct {

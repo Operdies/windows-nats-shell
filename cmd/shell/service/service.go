@@ -10,6 +10,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
+	"github.com/operdies/windows-nats-shell/pkg/winapi"
 )
 
 type Jobber interface {
@@ -83,6 +84,11 @@ func (j *ProcessJob) Start() error {
 	if j.service.Enabled != nil && *j.service.Enabled == false {
 		return nil
 	}
+
+	if j.service.Detach {
+		return winapi.StartDetachedProcess(j.service.Executable, j.service.Admin)
+	}
+
 	if j.cmd != nil {
 		return fmt.Errorf("Process %s is already running.", j.name)
 	}

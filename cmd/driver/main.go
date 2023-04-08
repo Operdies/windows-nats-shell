@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 	"time"
-	"unsafe"
 
 	screenApi "github.com/operdies/windows-nats-shell/pkg/nats/api/screen"
 	"github.com/operdies/windows-nats-shell/pkg/nats/api/shell"
@@ -86,7 +85,7 @@ func ListenIndefinitely() {
 			return err.Error()
 		}
 
-		err = startDetachedProcess(val, adm)
+		err = winapi.StartDetachedProcess(val, adm)
 
 		if err != nil {
 			return err.Error()
@@ -128,25 +127,6 @@ func ListenIndefinitely() {
 		return true
 	})
 	select {}
-}
-
-func strPtr(s string) wintypes.LPCSTR {
-	v := []byte(s)
-	vv := unsafe.Pointer(&v[0])
-	return wintypes.LPCSTR(vv)
-}
-
-func startDetachedProcess(proc string, admin bool) error {
-	const sw_shownormal = 1
-	procPtr := strPtr(proc)
-	var verbPtr wintypes.LPCSTR = 0
-	verb := `open`
-	if admin {
-		verb = `runas`
-		verbPtr = strPtr(verb)
-	}
-	_, err := winapi.ShellExecute(0, verbPtr, procPtr, 0, 0, sw_shownormal)
-	return err
 }
 
 func mergeMaps(maps ...map[string]string) map[string]string {

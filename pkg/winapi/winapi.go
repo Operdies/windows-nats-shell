@@ -126,6 +126,25 @@ func AssocQueryString(flags wintypes.AssocF, str wintypes.AssocStr, pszAssoc, ps
 	return wintypes.HRESULT(r)
 }
 
+func strPtr(s string) wintypes.LPCSTR {
+	v := []byte(s)
+	vv := unsafe.Pointer(&v[0])
+	return wintypes.LPCSTR(vv)
+}
+
+func StartDetachedProcess(proc string, admin bool) error {
+	const sw_shownormal = 1
+	procPtr := strPtr(proc)
+	var verbPtr wintypes.LPCSTR = 0
+	verb := `open`
+	if admin {
+		verb = `runas`
+		verbPtr = strPtr(verb)
+	}
+	_, err := ShellExecute(0, verbPtr, procPtr, 0, 0, sw_shownormal)
+	return err
+}
+
 func ShellExecute(hwnd wintypes.HWND, lpOperation, lpFile, lpParameters, lpDirectory wintypes.LPCSTR, nShowCmd int) (wintypes.HINSTANCE, error) {
 	r, _, err := shellExecuteA.Call(uintptr(hwnd), uintptr(lpOperation), uintptr(lpFile), uintptr(lpParameters), uintptr(lpDirectory), uintptr(nShowCmd))
 	if r >= 32 {
